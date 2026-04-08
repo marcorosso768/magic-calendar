@@ -617,11 +617,15 @@ ${typesCss}
       function closeQTE(e) {
         const ep = document.getElementById('qte-emoji-popup');
         const ip = document.querySelector('.imgp-overlay');
-        if (!popup.contains(e.target) && !ep?.contains(e.target) && !ip?.contains(e.target)) {
-          popup.remove();
-          ep?.remove();
-          document.removeEventListener('click', closeQTE);
-        }
+        // e.target.closest funziona anche su elementi già rimossi dal DOM
+        if (popup.contains(e.target)) return;
+        if (ep?.contains(e.target)) return;
+        if (ip?.contains(e.target)) return;
+        if (e.target.closest?.('#qte-emoji-popup')) return; // emoji appena selezionata
+        if (e.target.closest?.('.imgp-overlay')) return;
+        popup.remove();
+        ep?.remove();
+        document.removeEventListener('click', closeQTE);
       }
       document.addEventListener('click', closeQTE);
     }, 10);
