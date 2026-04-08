@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Calendario Magico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!-- i18n DEVE caricare prima di tutto il resto -->
+<script src="i18n.js"></script>
+</head>
+<body>
+
+<div id="app-shell">
+<aside id="sidebar">
+  <div class="logo" id="logo">🦄 <span>Calendario Magico</span></div>
+  <nav class="nav-group">
+    <button class="nav-btn active" data-view="monthly">📅 Mensile</button>
+    <button class="nav-btn" data-view="weekly">🗓️ Settimanale</button>
+  </nav>
+  <div class="sidebar-label">Mese corrente</div>
+  <div class="month-nav">
+    <button id="prev-month" class="arrow">‹</button>
+    <span id="month-label">Aprile 2026</span>
+    <button id="next-month" class="arrow">›</button>
+  </div>
+  <div class="sidebar-label">I tuoi calendari</div>
+  <div id="saved-list" class="saved-list"></div>
+  <button id="btn-new" class="btn-outline full">＋ Nuovo calendario</button>
+  <div class="spacer"></div>
+  <button id="btn-settings" class="btn-ghost">⚙️ Impostazioni</button>
+  <button id="btn-export" class="btn-accent full">⬇ Esporta PDF</button>
+</aside>
+
+<main id="main">
+  <div id="view-monthly" class="view active"></div>
+  <div id="view-weekly"  class="view"></div>
+</main>
+</div>
+
+<!-- Day editor -->
+<div id="modal-day" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-day-title">Giorno</h2>
+      <button class="close-btn" data-close="modal-day">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Tipo di giorno</div>
+      <div id="day-type-picker" class="type-picker"></div>
+      <div class="field-label">Attività / Icona</div>
+      <div id="day-icon-picker" class="icon-picker"></div>
+      <div class="field-label">Immagine personalizzata</div>
+      <div id="day-img-picker"></div>
+      <div class="field-label">Note</div>
+      <textarea id="day-notes" rows="3" placeholder="Aggiungi una nota…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-day-save" class="btn-accent">Salva</button>
+      <button class="btn-outline" data-close="modal-day">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hour editor -->
+<div id="modal-hour" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modal-hour-title">Fascia oraria</h2>
+      <button class="close-btn" data-close="modal-hour">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Attività</div>
+      <div id="hour-icon-picker" class="icon-picker"></div>
+      <div class="field-label">Etichetta personalizzata</div>
+      <input id="hour-label-inp" type="text" placeholder="Es. Scuola, Sport…">
+      <div class="field-label">Note</div>
+      <textarea id="hour-notes" rows="2" placeholder="Note opzionali…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-hour-save" class="btn-accent">Salva</button>
+      <button class="btn-outline" data-close="modal-hour">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="modal-settings" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h2 id="set-h2">⚙️ Impostazioni</h2>
+      <button class="close-btn" data-close="modal-settings">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-block">
+        <div class="settings-title" id="set-title-theme">🎨 Tema sfondo</div>
+        <div id="theme-grid" class="theme-grid"></div>
+      </div>
+      <div class="settings-block">
+        <div class="settings-title" id="set-title-texts">📋 Testi del calendario</div>
+        <div class="field-label" id="set-label-subtitle">Sottotitolo</div>
+        <input id="set-subtitle" type="text" placeholder="Il nostro calendario magico">
+        <div class="field-label" id="set-label-footer">Messaggio in fondo</div>
+        <input id="set-footer" type="text" placeholder="Ti voglio bene ogni giorno 💜">
+      </div>
+      <div class="settings-block">
+        <div class="settings-title" id="set-title-slots">🕐 Fasce orarie</div>
+        <p class="hint" id="set-hint-slots">Emoji · Inizio → Fine · Etichetta</p>
+        <div id="timeslot-list" class="timeslot-list"></div>
+        <button id="btn-add-slot" class="btn-sm mt8">＋ Aggiungi fascia</button>
+      </div>
+      <div class="settings-block">
+        <div class="settings-title" id="set-title-icons">🏷️ Icone personalizzate</div>
+        <div id="custom-icons" class="custom-icons"></div>
+        <div class="add-icon-row">
+          <input id="new-icon-emoji" type="text" maxlength="2" placeholder="🎸" class="emoji-inp">
+          <input id="new-icon-label" type="text" placeholder="Chitarra">
+          <button id="btn-add-icon" class="btn-sm">＋</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div id="settings-version" class="settings-version"></div>
+      <button id="btn-settings-save" class="btn-accent">Salva impostazioni</button>
+      <button id="set-btn-close" class="btn-outline" data-close="modal-settings">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- New calendar -->
+<div id="modal-new" class="modal hidden">
+  <div class="modal-box narrow">
+    <div class="modal-head">
+      <h2>＋ Nuovo calendario</h2>
+      <button class="close-btn" data-close="modal-new">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Nome</div>
+      <input id="new-name" type="text" placeholder="Es. Aprile — Luna">
+      <div class="field-label">Mese e anno</div>
+      <div class="row2">
+        <select id="new-month">
+          <option value="0">Gennaio</option><option value="1">Febbraio</option>
+          <option value="2">Marzo</option><option value="3" selected>Aprile</option>
+          <option value="4">Maggio</option><option value="5">Giugno</option>
+          <option value="6">Luglio</option><option value="7">Agosto</option>
+          <option value="8">Settembre</option><option value="9">Ottobre</option>
+          <option value="10">Novembre</option><option value="11">Dicembre</option>
+        </select>
+        <input id="new-year" type="number" value="2026" min="2020" max="2040">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-new-confirm" class="btn-accent">Crea calendario</button>
+      <button class="btn-outline" data-close="modal-new">Annulla</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Theme welcome -->
+<div id="modal-theme-welcome" class="modal hidden">
+  <div class="modal-box narrow">
+    <div class="modal-head">
+      <h2 id="welcome-theme-title">Choose your style</h2>
+    </div>
+    <div class="modal-body">
+      <p id="welcome-theme-subtitle" class="hint"></p>
+      <div id="welcome-theme-grid" class="theme-grid welcome-theme-grid"></div>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-theme-welcome-continue" class="btn-accent">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Preview Modal -->
+<div id="modal-export" class="modal hidden">
+  <div class="modal-box export-preview-box">
+    <div class="modal-head">
+      <h2 id="export-preview-title">Anteprima esportazione</h2>
+      <button class="close-btn" data-close="modal-export">✕</button>
+    </div>
+    <div class="modal-body export-preview-body">
+      <div class="export-orient-row">
+        <button id="export-btn-portrait" class="btn-sm active-mode">↕ Verticale</button>
+        <button id="export-btn-landscape" class="btn-sm">↔ Orizzontale</button>
+      </div>
+      <div class="export-orient-row">
+        <button id="export-btn-center" class="btn-sm active-mode">⊞ Centra</button>
+        <button id="export-btn-fit" class="btn-sm">⊡ Adatta</button>
+      </div>
+      <div id="export-preview-wrap">
+        <iframe id="export-iframe" scrolling="no"></iframe>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button id="btn-export-save" class="btn-accent">Salva PDF</button>
+      <button class="btn-outline" data-close="modal-export">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts in correct order: i18n already loaded in <head> -->
+<script src="themes.js"></script>
+<script src="storage.js"></script>
+<script src="settings.js"></script>
+<script src="emoji-picker.js"></script>
+<script src="image-picker.js"></script>
+<script src="views/calendar.js"></script>
+<script src="views/weekly.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#f5f5f7"/>
+      <stop offset="100%" stop-color="#e8e3f0"/>
+    </linearGradient>
+    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e879f9"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="sq">
+      <rect width="1024" height="1024" rx="224" ry="224"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" ry="224" fill="url(#bg)"/>
+  <g clip-path="url(#sq)">
+    <!-- Calendar card -->
+    <rect x="112" y="152" width="800" height="720" rx="56" fill="white"/>
+    <!-- Header -->
+    <rect x="112" y="152" width="800" height="172" rx="56" fill="url(#hdr)"/>
+    <rect x="112" y="268" width="800" height="56" fill="url(#hdr)"/>
+    <!-- Ring clips -->
+    <rect x="276" y="108" width="48" height="92" rx="24" fill="#ede9fe" opacity="0.92"/>
+    <rect x="700" y="108" width="48" height="92" rx="24" fill="#ede9fe" opacity="0.92"/>
+    <rect x="290" y="122" width="20" height="64" rx="10" fill="#9333ea" opacity="0.25"/>
+    <rect x="714" y="122" width="20" height="64" rx="10" fill="#9333ea" opacity="0.25"/>
+
+    <!-- Weekday colour bars -->
+    <rect x="130" y="348" width="80" height="18" rx="9" fill="#a855f7" opacity="0.55"/>
+    <rect x="244" y="348" width="80" height="18" rx="9" fill="#ec4899" opacity="0.55"/>
+    <rect x="358" y="348" width="80" height="18" rx="9" fill="#f97316" opacity="0.55"/>
+    <rect x="472" y="348" width="80" height="18" rx="9" fill="#eab308" opacity="0.55"/>
+    <rect x="586" y="348" width="80" height="18" rx="9" fill="#22c55e" opacity="0.65"/>
+    <rect x="700" y="348" width="80" height="18" rx="9" fill="#3b82f6" opacity="0.65"/>
+    <rect x="814" y="348" width="80" height="18" rx="9" fill="#ef4444" opacity="0.65"/>
+
+    <!-- Helper macro: cell(x,y,n,type) -->
+    <!-- type: empty=light grey, neutral=f9fafb/grey, together=fae8ff/purple, away=ffe4e6/red -->
+    <!-- Row 1: 2 empty + 1-5 -->
+    <rect x="130" y="376" width="80" height="80" rx="20" fill="#f3f4f6" opacity="0.45"/>
+    <rect x="244" y="376" width="80" height="80" rx="20" fill="#f3f4f6" opacity="0.45"/>
+    <!-- 1 -->
+    <rect x="358" y="376" width="80" height="80" rx="20" fill="#f3e8ff"/>
+    <text x="398" y="426" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">1</text>
+    <!-- 2 together -->
+    <rect x="472" y="376" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="512" y="426" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">2</text>
+    <!-- 3 together -->
+    <rect x="586" y="376" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="626" y="426" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">3</text>
+    <!-- 4 neutral -->
+    <rect x="700" y="376" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="740" y="426" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">4</text>
+    <!-- 5 neutral -->
+    <rect x="814" y="376" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="854" y="426" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">5</text>
+
+    <!-- Row 2 -->
+    <rect x="130" y="468" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="170" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">6</text>
+    <rect x="244" y="468" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="284" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">7</text>
+    <rect x="358" y="468" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="398" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">8</text>
+    <rect x="472" y="468" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="512" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">9</text>
+    <rect x="586" y="468" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="626" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">10</text>
+    <rect x="700" y="468" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="740" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">11</text>
+    <rect x="814" y="468" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="854" y="518" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">12</text>
+
+    <!-- Row 3 -->
+    <rect x="130" y="560" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="170" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">13</text>
+    <rect x="244" y="560" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="284" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">14</text>
+    <rect x="358" y="560" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="398" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">15</text>
+    <rect x="472" y="560" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="512" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">16</text>
+    <rect x="586" y="560" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="626" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">17</text>
+    <rect x="700" y="560" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="740" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">18</text>
+    <rect x="814" y="560" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="854" y="610" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">19</text>
+
+    <!-- Row 4 -->
+    <rect x="130" y="652" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="170" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">20</text>
+    <rect x="244" y="652" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="284" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">21</text>
+    <rect x="358" y="652" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="398" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">22</text>
+    <rect x="472" y="652" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="512" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">23</text>
+    <rect x="586" y="652" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="626" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">24</text>
+    <rect x="700" y="652" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="740" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">25</text>
+    <rect x="814" y="652" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="854" y="702" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">26</text>
+
+    <!-- Row 5 -->
+    <rect x="130" y="744" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="170" y="794" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">27</text>
+    <rect x="244" y="744" width="80" height="80" rx="20" fill="#fae8ff" stroke="#d946ef" stroke-width="4"/>
+    <text x="284" y="794" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#7c3aed">28</text>
+    <rect x="358" y="744" width="80" height="80" rx="20" fill="#f9fafb"/>
+    <text x="398" y="794" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#9ca3af">29</text>
+    <rect x="472" y="744" width="80" height="80" rx="20" fill="#ffe4e6" stroke="#f43f5e" stroke-width="4"/>
+    <text x="512" y="794" text-anchor="middle" font-family="-apple-system,Helvetica Neue,sans-serif" font-size="36" font-weight="800" fill="#be123c">30</text>
+
+    <!-- Shine overlay -->
+    <rect width="1024" height="540" rx="224" fill="url(#shine)"/>
+  </g>
+  <rect width="1024" height="1024" rx="224" ry="224" fill="none" stroke="#00000012" stroke-width="2"/>
+</svg>

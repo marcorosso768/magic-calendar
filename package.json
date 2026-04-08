@@ -1,0 +1,126 @@
+{
+  "name": "magic-calendar",
+  "version": "1.0.0",
+  "description": "Calendario personalizzabile per tutte le famiglie con bambini",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:all": "electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.marcorosso.magic-calendar",
+    "productName": "Magic Calendar",
+    "copyright": "Copyright © 2026 Marco Rosso",
+    "afterPack": "./build-scripts/afterPack.js",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "extraResources": [
+      {
+        "from": "build-resources/icon-light.icns",
+        "to": "."
+      },
+      {
+        "from": "build-resources/icon-dark.icns",
+        "to": "."
+      }
+    ],
+    "mac": {
+      "icon": "build-resources/icon.icns"
+    },
+    "dmg": {
+      "icon": null
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md}",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "mac": {
+      "category": "public.app-category.lifestyle",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.icns",
+      "darkModeSupport": true,
+      "gatekeeperAssess": false,
+      "hardenedRuntime": false,
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.ico"
+    },
+    "dmg": {
+      "title": "Magic Calendar",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "background": "build-resources/dmg-background.png",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 185,
+          "type": "file"
+        },
+        {
+          "x": 390,
+          "y": 185,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "marcorosso768",
+        "repo": "magic-calendar"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  }
+}
