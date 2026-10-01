@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Calendario Magico</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <!-- i18n DEVE caricare prima di tutto il resto -->
 <script src="i18n.js"></script>
@@ -47,18 +45,18 @@
       <button class="close-btn" data-close="modal-day">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field-label">Tipo di giorno</div>
+      <div class="field-label" data-i18n="typeOfDay">Tipo di giorno</div>
       <div id="day-type-picker" class="type-picker"></div>
-      <div class="field-label">Attività / Icona</div>
+      <div class="field-label" data-i18n="activityIcon">Attività / Icona</div>
       <div id="day-icon-picker" class="icon-picker"></div>
-      <div class="field-label">Immagine personalizzata</div>
+      <div class="field-label" data-i18n="customImage">Immagine personalizzata</div>
       <div id="day-img-picker"></div>
-      <div class="field-label">Note</div>
-      <textarea id="day-notes" rows="3" placeholder="Aggiungi una nota…"></textarea>
+      <div class="field-label" data-i18n="notes">Note</div>
+      <textarea id="day-notes" rows="3" placeholder="Aggiungi una nota…" data-i18n-ph="notesPlaceholder"></textarea>
     </div>
     <div class="modal-foot">
-      <button id="btn-day-save" class="btn-accent">Salva</button>
-      <button class="btn-outline" data-close="modal-day">Annulla</button>
+      <button id="btn-day-save" class="btn-accent" data-i18n="save">Salva</button>
+      <button class="btn-outline" data-close="modal-day" data-i18n="cancel">Annulla</button>
     </div>
   </div>
 </div>
@@ -67,20 +65,20 @@
 <div id="modal-hour" class="modal hidden">
   <div class="modal-box">
     <div class="modal-head">
-      <h2 id="modal-hour-title">Fascia oraria</h2>
+      <h2 id="modal-hour-title" data-i18n="timeSlot">Fascia oraria</h2>
       <button class="close-btn" data-close="modal-hour">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field-label">Attività</div>
+      <div class="field-label" data-i18n="activity">Attività</div>
       <div id="hour-icon-picker" class="icon-picker"></div>
-      <div class="field-label">Etichetta personalizzata</div>
-      <input id="hour-label-inp" type="text" placeholder="Es. Scuola, Sport…">
-      <div class="field-label">Note</div>
-      <textarea id="hour-notes" rows="2" placeholder="Note opzionali…"></textarea>
+      <div class="field-label" data-i18n="customLabel">Etichetta personalizzata</div>
+      <input id="hour-label-inp" type="text" placeholder="Es. Scuola, Sport…" data-i18n-ph="customLabelPh">
+      <div class="field-label" data-i18n="notes">Note</div>
+      <textarea id="hour-notes" rows="2" placeholder="Note opzionali…" data-i18n-ph="notesPh"></textarea>
     </div>
     <div class="modal-foot">
-      <button id="btn-hour-save" class="btn-accent">Salva</button>
-      <button class="btn-outline" data-close="modal-hour">Annulla</button>
+      <button id="btn-hour-save" class="btn-accent" data-i18n="save">Salva</button>
+      <button class="btn-outline" data-close="modal-hour" data-i18n="cancel">Annulla</button>
     </div>
   </div>
 </div>
@@ -114,8 +112,8 @@
         <div class="settings-title" id="set-title-icons">🏷️ Icone personalizzate</div>
         <div id="custom-icons" class="custom-icons"></div>
         <div class="add-icon-row">
-          <input id="new-icon-emoji" type="text" maxlength="2" placeholder="🎸" class="emoji-inp">
-          <input id="new-icon-label" type="text" placeholder="Chitarra">
+          <input id="new-icon-emoji" type="text" maxlength="16" placeholder="🎸" class="emoji-inp">
+          <input id="new-icon-label" type="text" placeholder="Chitarra" data-i18n-ph="newIconLabelPh">
           <button id="btn-add-icon" class="btn-sm">＋</button>
         </div>
       </div>
@@ -132,13 +130,13 @@
 <div id="modal-new" class="modal hidden">
   <div class="modal-box narrow">
     <div class="modal-head">
-      <h2>＋ Nuovo calendario</h2>
+      <h2 data-i18n="newCalendarTitle">＋ Nuovo calendario</h2>
       <button class="close-btn" data-close="modal-new">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field-label">Nome</div>
-      <input id="new-name" type="text" placeholder="Es. Aprile — Luna">
-      <div class="field-label">Mese e anno</div>
+      <div class="field-label" data-i18n="calendarName">Nome</div>
+      <input id="new-name" type="text" placeholder="Es. Aprile — Luna" data-i18n-ph="calendarNamePh">
+      <div class="field-label" data-i18n="monthAndYear">Mese e anno</div>
       <div class="row2">
         <select id="new-month">
           <option value="0">Gennaio</option><option value="1">Febbraio</option>
@@ -148,12 +146,12 @@
           <option value="8">Settembre</option><option value="9">Ottobre</option>
           <option value="10">Novembre</option><option value="11">Dicembre</option>
         </select>
-        <input id="new-year" type="number" value="2026" min="2020" max="2040">
+        <input id="new-year" type="number" value="2026" min="1900" max="2200">
       </div>
     </div>
     <div class="modal-foot">
-      <button id="btn-new-confirm" class="btn-accent">Crea calendario</button>
-      <button class="btn-outline" data-close="modal-new">Annulla</button>
+      <button id="btn-new-confirm" class="btn-accent" data-i18n="createCalendar">Crea calendario</button>
+      <button class="btn-outline" data-close="modal-new" data-i18n="cancel">Annulla</button>
     </div>
   </div>
 </div>
@@ -197,7 +195,7 @@
     </div>
     <div class="modal-foot">
       <button id="btn-export-save" class="btn-accent">Salva PDF</button>
-      <button class="btn-outline" data-close="modal-export">Annulla</button>
+      <button class="btn-outline" data-close="modal-export" data-i18n="cancel">Annulla</button>
     </div>
   </div>
 </div>

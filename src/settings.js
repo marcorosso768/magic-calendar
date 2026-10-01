@@ -141,6 +141,9 @@ const SettingsManager = (() => {
 
   function set(patch) { Object.assign(s, patch); }
 
+  // Restores a full snapshot (used when Settings is closed without saving).
+  function replace(snapshot) { s = snapshot; }
+
   function getTheme() {
     return THEMES.find(t => t.id === s?.themeId) || THEMES[0];
   }
@@ -163,7 +166,7 @@ const SettingsManager = (() => {
     return [...getBuiltinIcons(), ...(s.customIcons || [])];
   }
 
-  return { load, save, get, set, getTheme, applyTheme, allIcons, translateDefaultTexts, applyDarkMode: applyDarkModeClass };
+  return { load, save, get, set, replace, getTheme, applyTheme, allIcons, translateDefaultTexts, applyDarkMode: applyDarkModeClass };
 })();
 
 function renderThemeCards(grid, activeId, onSelect) {
@@ -173,7 +176,7 @@ function renderThemeCards(grid, activeId, onSelect) {
   THEMES.forEach(t => {
     const card = document.createElement('div');
     card.className = 'theme-card theme-card--preview' + (t.id === activeId ? ' active' : '');
-    const label = (typeof names === 'object' && !Array.isArray(names)) ? (names[t.id] || t.id) : t.id;
+    const label = escapeHtml((typeof names === 'object' && !Array.isArray(names)) ? (names[t.id] || t.id) : t.id);
     const topDeco = (t.decos?.top || []).slice(0, 3).join(' ');
     const sideDeco = (t.decos?.corners || [t.emoji]).slice(0, 2).join(' ');
     card.innerHTML = `
@@ -224,8 +227,17 @@ async function openThemeWelcome() {
 }
 
 // ── Settings modal ───────────────────────────────────────────────
+// Settings edits apply live (theme, language…) but are only kept if the user presses Save:
+// closing the window in any other way restores this snapshot.
+let _settingsSnapshot = null;
+let _settingsSaved    = false;
+
 function openSettings() {
+  // Already open (e.g. Cmd+, pressed again): keep the snapshot taken when it was opened.
+  if (!document.getElementById('modal-settings').classList.contains('hidden')) return;
   const s = SettingsManager.get();
+  _settingsSnapshot = JSON.parse(JSON.stringify(s));
+  _settingsSaved    = false;
 
   // Traduce i titoli delle sezioni del modale nella lingua corrente
   const modalStrings = {
@@ -492,9 +504,9 @@ function _renderTypesUI(block) {
     addBtn.style.marginTop = '4px';
     addBtn.textContent = I18n.t('addType');
     addBtn.addEventListener('click', () => {
-      const TYPE_KEYS = ['together','away','type3','type4'];
       const newIdx = _editTypes.length;
-      _editTypes.push({ key: TYPE_KEYS[newIdx] || `type${newIdx+1}`, emoji:'🌟', label:`Tipo ${newIdx+1}`, sub:'', mode:'emoji' });
+      const isIt = I18n.currentLang() === 'it';
+      _editTypes.push({ key: nextTypeKey(_editTypes), emoji:'🌟', label: isIt ? `Tipo ${newIdx+1}` : `Type ${newIdx+1}`, sub:'', mode:'emoji' });
       _renderTypesUI();
     });
     block.appendChild(addBtn);
@@ -603,11 +615,11 @@ function renderTimeslots(slots) {
     const row = document.createElement('div');
     row.className = 'ts-row';
     row.innerHTML = `
-      <input class="emoji-inp" type="text" value="${slot.emoji||''}" maxlength="2" placeholder="⏰">
-      <input type="text" value="${slot.start||''}" placeholder="08:00" pattern="[0-9]{2}:[0-9]{2}" style="width:58px;text-align:center">
+      <input class="emoji-inp" type="text" value="${escapeHtml(slot.emoji||'')}" maxlength="16" placeholder="⏰">
+      <input type="text" value="${escapeHtml(slot.start||'')}" placeholder="08:00" pattern="[0-9]{2}:[0-9]{2}" style="width:58px;text-align:center">
       <span style="font-size:10px;color:#aaa">→</span>
-      <input type="text" value="${slot.end||''}"   placeholder="13:00" pattern="[0-9]{2}:[0-9]{2}" style="width:58px;text-align:center">
-      <input type="text" value="${slot.label||''}" placeholder="${I18n.t('newSlotLabel')}">
+      <input type="text" value="${escapeHtml(slot.end||'')}"   placeholder="13:00" pattern="[0-9]{2}:[0-9]{2}" style="width:58px;text-align:center">
+      <input type="text" value="${escapeHtml(slot.label||'')}" placeholder="${escapeHtml(I18n.t('newSlotLabel'))}">
       <button class="btn-sm danger" data-i="${i}">✕</button>
     `;
     row.querySelector('[data-i]').addEventListener('click', () => {
@@ -632,7 +644,7 @@ function renderCustomIcons(icons) {
   (icons || []).forEach((ic, i) => {
     const tag = document.createElement('div');
     tag.className = 'ci-tag';
-    tag.innerHTML = `<span>${ic.emoji}</span><span>${ic.label}</span><button data-i="${i}">✕</button>`;
+    tag.innerHTML = `<span>${escapeHtml(ic.emoji)}</span><span>${escapeHtml(ic.label)}</span><button data-i="${i}">✕</button>`;
     tag.querySelector('button').addEventListener('click', () => {
       const cur = SettingsManager.get();
       cur.customIcons.splice(i, 1);
@@ -664,6 +676,15 @@ function updateStaticStrings() {
   document.title = I18n.t('appName');
   // Keep <html lang> in sync with the active UI language.
   try { document.documentElement.lang = I18n.currentLang(); } catch (_) {}
+  // Texts marked in index.html: data-i18n (text), data-i18n-ph (placeholder)
+  document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = I18n.t(e.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(e => { e.placeholder = I18n.t(e.dataset.i18nPh); });
+  // Month names in the "New calendar" form
+  const newMonth = document.getElementById('new-month');
+  if (newMonth) {
+    const mNames = I18n.ta('months');
+    [...newMonth.options].forEach((o, i) => { if (mNames[i]) o.textContent = mNames[i]; });
+  }
   // Export preview modal strings
   const exportStrings = {
     'export-preview-title': I18n.t('exportPreview'),
@@ -713,8 +734,8 @@ function initSettingsListeners() {
       const base = {
         key:   t.key,
         mode:  t.mode || 'emoji',
-        label: document.getElementById(`set-t${i}-label`)?.value?.trim() || t.label || '',
-        sub:   document.getElementById(`set-t${i}-sub`)?.value?.trim()   || t.sub   || '',
+        label: (document.getElementById(`set-t${i}-label`)?.value ?? t.label ?? '').trim(),
+        sub:   (document.getElementById(`set-t${i}-sub`)?.value   ?? t.sub   ?? '').trim(),
       };
       if (t.mode === 'photo') {
         return { ...base, photoUrl: t.photoUrl || '', emoji: t.emoji || '' };
@@ -726,7 +747,22 @@ function initSettingsListeners() {
     SettingsManager.set(cur);
     I18n.setLang(cur.language);
     await SettingsManager.save();
+    _settingsSaved = true;
     document.getElementById('modal-settings').classList.add('hidden');
     updateStaticStrings();
+    window.api?.refreshMenu?.();
   });
+
+  // Closing Settings without saving (✕, Close, click outside) restores the previous settings.
+  const settingsModal = document.getElementById('modal-settings');
+  new MutationObserver(() => {
+    if (!settingsModal.classList.contains('hidden') || _settingsSaved || !_settingsSnapshot) return;
+    SettingsManager.replace(_settingsSnapshot);
+    _settingsSnapshot = null;
+    const restored = SettingsManager.get();
+    I18n.setLang(restored.language);
+    SettingsManager.applyTheme();
+    SettingsManager.applyDarkMode(restored.darkMode || 'auto');
+    updateStaticStrings();
+  }).observe(settingsModal, { attributes: true, attributeFilter: ['class'] });
 }

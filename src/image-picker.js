@@ -1,6 +1,67 @@
 // image-picker.js — reusable image selection component
 // Depends on: i18n.js, preload.js (window.api)
 
+// Same image whatever the stored form (mcimg://local/name, old file:// URL): compare file names.
+function imageName(url) {
+  const last = String(url || '').split(/[\\/]/).pop() || '';
+  try { return decodeURIComponent(last.split('?')[0]); } catch (_) { return last; }
+}
+
+async function findImageUsage(url) {
+  const name = imageName(url);
+  const days = [];
+  for (const key of await Storage.list()) {
+    const cal = await Storage.load(key);
+    for (const [day, dd] of Object.entries(cal?.days || {})) {
+      if (dd?.image && imageName(dd.image) === name) days.push({ key, day });
+    }
+  }
+  const types = (SettingsManager.get().types || [])
+    .map((t, i) => (t.photoUrl && imageName(t.photoUrl) === name ? i : -1))
+    .filter(i => i >= 0);
+  return { days, types, count: days.length + types.length };
+}
+
+async function removeImageReferences(url, usage) {
+  const byKey = {};
+  usage.days.forEach(({ key, day }) => { (byKey[key] = byKey[key] || []).push(day); });
+  for (const [key, days] of Object.entries(byKey)) {
+    const cal = await Storage.load(key);
+    if (!cal?.days) continue;
+    days.forEach(d => { if (cal.days[d]) cal.days[d].image = ''; });
+    await Storage.save(key, cal);
+  }
+  const name = imageName(url);
+  const clear = t => (t && t.photoUrl && imageName(t.photoUrl) === name ? { ...t, photoUrl: '' } : t);
+  const settingsOpen = !document.getElementById('modal-settings')?.classList.contains('hidden');
+
+  if (!settingsOpen) {
+    if (usage.types.length) {
+      SettingsManager.set({ types: (SettingsManager.get().types || []).map(clear) });
+      await SettingsManager.save();
+    }
+    return;
+  }
+
+  // Settings window open: its edits are not saved yet. Clear the photo in the live settings, in the
+  // copy being edited and in the snapshot restored on "Close", and write to disk only the snapshot
+  // (the last saved settings) without the photo, so unsaved edits are not saved by this.
+  SettingsManager.set({ types: (SettingsManager.get().types || []).map(clear) });
+  if (_settingsSnapshot) {
+    _settingsSnapshot.types = (_settingsSnapshot.types || []).map(clear);
+    await Storage.saveSettings(_settingsSnapshot);
+  }
+  if (Array.isArray(_editTypes)) {
+    // keep what the user typed in the label fields before redrawing them
+    _editTypes = _editTypes.map((t, i) => clear({
+      ...t,
+      label: document.getElementById(`set-t${i}-label`)?.value ?? t.label,
+      sub:   document.getElementById(`set-t${i}-sub`)?.value   ?? t.sub,
+    }));
+    _renderTypesUI();
+  }
+}
+
 /**
  * Build an inline image picker inside `container`.
  * Shows all saved images as thumbnails + an import button.
@@ -52,9 +113,15 @@ async function buildImagePicker(container, currentUrl, onSelect) {
     del.title = I18n.t('removeImage') || 'Elimina';
     del.addEventListener('click', async (e) => {
       e.stopPropagation();
+      // Images can be used by days of any calendar and by day types: ask first, then remove the
+      // references too, so no calendar is left pointing to a missing file.
+      const usage = await findImageUsage(url);
+      if (!confirm(I18n.tf('confirmDeleteImage', usage.count))) return;
       await window.api.imageDelete(url);
+      await removeImageReferences(url, usage);
       if (currentUrl === url && onSelect) onSelect('');
       await buildImagePicker(container, currentUrl === url ? '' : currentUrl, onSelect);
+      if (usage.count) App.refresh();
     });
     el.appendChild(del);
     el.addEventListener('click', () => {

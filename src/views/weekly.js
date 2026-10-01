@@ -11,9 +11,9 @@ function _fmt(timeStr, fmt) {
 
 const WeekView = (() => {
   let _offset   = 0;
-  let _calKey   = null;
-  let _weekData = {};
+  let _weekData = {};   // weekly.json: { "<year>-W<nn>" | "ROUTINE": { slots: {...} } }, shared by all calendars
   let _editing  = null;
+  let _iconPicker = null;
   let _routineMode = false; // true = routine (no dates), false = calendar settimana
 
   const WCOLORS = [
@@ -45,10 +45,8 @@ const WeekView = (() => {
     return `${d.getFullYear()}-W${String(wn).padStart(2,'0')}`;
   }
 
-  async function render(calKey) {
-    _calKey = calKey;
-    const saved  = await Storage.load(calKey);
-    _weekData    = saved?.weeklyData || {};
+  async function render() {
+    _weekData = (await Storage.loadWeekly()) || {};
 
     const s     = SettingsManager.get();
     const tf    = s.timeFormat || '24h';
@@ -106,11 +104,11 @@ const WeekView = (() => {
     `;
 
     if (!_routineMode) {
-      document.getElementById('wk-prev').onclick = () => { _offset--; render(calKey); };
-      document.getElementById('wk-next').onclick = () => { _offset++; render(calKey); };
+      document.getElementById('wk-prev').onclick = () => { _offset--; render(); };
+      document.getElementById('wk-next').onclick = () => { _offset++; render(); };
     }
-    document.getElementById('btn-mode-cal').onclick     = () => { _routineMode=false; render(calKey); };
-    document.getElementById('btn-mode-routine').onclick = () => { _routineMode=true;  render(calKey); };
+    document.getElementById('btn-mode-cal').onclick     = () => { _routineMode=false; render(); };
+    document.getElementById('btn-mode-routine').onclick = () => { _routineMode=true;  render(); };
 
     const grid = document.getElementById('week-grid');
 
@@ -139,9 +137,9 @@ const WeekView = (() => {
       const timeCell = document.createElement('div');
       timeCell.className = 'wk-time';
       timeCell.innerHTML = `
-        <span class="t-emoji">${slot.emoji}</span>
-        <span class="t-range">${_fmt(slot.start,tf)}–${_fmt(slot.end,tf)}</span>
-        <span class="t-label">${slot.label}</span>
+        <span class="t-emoji">${escapeHtml(slot.emoji)}</span>
+        <span class="t-range">${escapeHtml(_fmt(slot.start,tf))}–${escapeHtml(_fmt(slot.end,tf))}</span>
+        <span class="t-label">${escapeHtml(slot.label)}</span>
       `;
       grid.appendChild(timeCell);
 
@@ -156,8 +154,8 @@ const WeekView = (() => {
         const cell = document.createElement('div');
         cell.className = 'wk-cell' + (filled ? ' filled' : '');
         cell.innerHTML = filled
-          ? `<span>${cd.icon||slot.emoji}</span><span class="wc-lbl">${cd.label||slot.label}</span>`
-          : `<span class="wc-empty">${slot.emoji}</span>`;
+          ? `<span>${escapeHtml(cd.icon||slot.emoji)}</span><span class="wc-lbl">${escapeHtml(cd.label||slot.label)}</span>`
+          : `<span class="wc-empty">${escapeHtml(slot.emoji)}</span>`;
 
         const dateObj = _routineMode ? null : dates[di];
         cell.addEventListener('click', () => openHourEditor(dateObj, di, slot, slotKey, cd, wk));
@@ -179,7 +177,7 @@ const WeekView = (() => {
       `${dayLabel} · ${_fmt(slot.start,_tf2)}–${_fmt(slot.end,_tf2)} ${slot.label}`;
 
     const picker = document.getElementById('hour-icon-picker');
-    buildEmojiPicker(picker, cd.icon || '');
+    _iconPicker = buildEmojiPicker(picker, cd.icon || '');
 
     document.getElementById('hour-label-inp').value = cd.label||'';
     document.getElementById('hour-notes').value     = cd.note ||'';
@@ -191,8 +189,7 @@ const WeekView = (() => {
       if (!_editing) return;
       const { slotKey, wk } = _editing;
 
-      const activeIcon = document.querySelector('#hour-icon-picker .icon-opt.active');
-      const emoji  = activeIcon?.dataset.emoji || '';
+      const emoji  = _iconPicker ? _iconPicker.getSelected() : '';
       const label  = document.getElementById('hour-label-inp').value.trim();
       const note   = document.getElementById('hour-notes').value.trim();
 
@@ -204,12 +201,10 @@ const WeekView = (() => {
         _weekData[wk].slots[slotKey] = { icon:emoji, label, note };
       }
 
-      const existing = (await Storage.load(_calKey)) || {};
-      existing.weeklyData = _weekData;
-      await Storage.save(_calKey, existing);
+      await Storage.saveWeekly(_weekData);
 
       document.getElementById('modal-hour').classList.add('hidden');
-      render(_calKey);
+      render();
     });
   }
 
@@ -261,9 +256,9 @@ const WeekView = (() => {
     let rowsHtml = '';
     s.timeslots.forEach(slot => {
       rowsHtml += `<div style="font-size:7px;font-weight:700;color:#9ca3af;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;padding-right:5px;border-right:2px solid #e9d5ff;gap:1px">
-        <span style="font-size:12px;line-height:1">${slot.emoji}</span>
-        <span style="font-size:7px;font-weight:800;color:${theme.colors.primary};white-space:nowrap">${_fmt(slot.start,_tf)}–${_fmt(slot.end,_tf)}</span>
-        <span style="font-size:7px;white-space:nowrap;max-width:58px;overflow:hidden;text-overflow:ellipsis">${slot.label}</span>
+        <span style="font-size:12px;line-height:1">${escapeHtml(slot.emoji)}</span>
+        <span style="font-size:7px;font-weight:800;color:${theme.colors.primary};white-space:nowrap">${escapeHtml(_fmt(slot.start,_tf))}–${escapeHtml(_fmt(slot.end,_tf))}</span>
+        <span style="font-size:7px;white-space:nowrap;max-width:58px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(slot.label)}</span>
       </div>`;
       for (let di = 0; di < 7; di++) {
         const dayStr  = _routineMode
@@ -275,12 +270,12 @@ const WeekView = (() => {
         const c       = WCOLS[di];
         if (filled) {
           rowsHtml += `<div style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${c.bg};border:1.5px solid ${c.border};border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:3px 2px">
-            <span style="font-size:15px;line-height:1">${cd.icon||slot.emoji}</span>
-            <span style="font-size:7px;font-weight:800;color:${c.text};text-align:center;line-height:1.2;word-break:break-word">${cd.label||slot.label}</span>
+            <span style="font-size:15px;line-height:1">${escapeHtml(cd.icon||slot.emoji)}</span>
+            <span style="font-size:7px;font-weight:800;color:${c.text};text-align:center;line-height:1.2;word-break:break-word">${escapeHtml(cd.label||slot.label)}</span>
           </div>`;
         } else {
           rowsHtml += `<div style="border:1.5px dashed ${c.border};border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:.25;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-            <span style="font-size:13px">${slot.emoji}</span>
+            <span style="font-size:13px">${escapeHtml(slot.emoji)}</span>
           </div>`;
         }
       }
@@ -300,7 +295,7 @@ const WeekView = (() => {
     const innerHtml = `
       <div class="rainbow-bar"></div>
       <div class="title">${theme.emoji} ${titleStr} ${theme.emoji}</div>
-      <div class="subtitle">${s.subtitle || I18n.t('defaultSubtitle')}</div>
+      <div class="subtitle">${escapeHtml(s.subtitle || I18n.t('defaultSubtitle'))}</div>
       <div class="wk-grid">${hdrHtml}${rowsHtml}</div>`;
 
     // In centered mode: deco wraps content (.cal-wrap), .page just centers
@@ -313,7 +308,7 @@ const WeekView = (() => {
 
     return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+${printFontCss()}
 @page{size:${PAGE_W_MM} ${PAGE_H_MM};margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Nunito',sans-serif;background:white;width:${PAGE_W_MM};height:${PAGE_H_MM}}

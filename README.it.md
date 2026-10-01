@@ -99,6 +99,35 @@ npm run build:win
 | macOS | `~/Library/Application Support/magic-calendar/` |
 | Windows | `%APPDATA%\magic-calendar\` |
 
+I calendari sono in `calendari/`, le settimane e la routine in `weekly.json`, le impostazioni in
+`settings.json`, le immagini in `images/`. Ogni file viene scritto in modo atomico e la versione precedente
+resta come `.bak`.
+
+---
+
+## 🔄 Aggiornamenti
+
+L'app controlla se c'è una nuova versione pochi secondi dopo l'avvio (e dal menu: *Controlla aggiornamenti…*).
+Se c'è, propone **Installa aggiornamento**:
+
+- **Windows**: l'aggiornamento viene scaricato e installato al riavvio.
+- **macOS**: l'app non è firmata con un Developer ID Apple, quindi non può usare l'installatore standard.
+  Scarica la nuova versione, ne verifica l'integrità, si sostituisce in Applicazioni e si riavvia.
+  Serve che l'app sia in una cartella scrivibile (di solito Applicazioni): se è aperta dall'immagine disco
+  o non può sostituirsi, apre invece la pagina di download.
+
+---
+
+## 🚀 Pubblicare una nuova versione
+
+1. Aggiorna `"version"` in `package.json` (es. `1.1.0`) e le note in `build-resources/release-notes.md`.
+2. Fai commit e push su `main`.
+3. Crea e pubblica il tag: `git tag v1.1.0 && git push origin v1.1.0`.
+
+GitHub Actions compila le versioni Mac e Windows, le carica in una release con i file per gli
+aggiornamenti (`latest-mac.yml`, `latest.yml`) e la pubblica. La compilazione si ferma se il tag e
+`package.json` non coincidono.
+
 ---
 
 ## Licenza

@@ -11,6 +11,7 @@ const TYPE_STYLES = [
 const CalView = (() => {
   let _editing = null;
   let _imgUrl  = '';
+  let _iconPicker = null; // API of the emoji picker in the day editor
   let _curYear, _curMonth, _curCalKey, _curCalData;
 
   // ── Render ───────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ const CalView = (() => {
     hdr.innerHTML = `
       <div class="rainbow-bar"></div>
       <div class="cal-title">${theme.emoji} ${MONTHS[month]||''} ${year} ${theme.emoji}</div>
-      <div class="cal-subtitle">${s.subtitle || I18n.t('defaultSubtitle')}</div>
+      <div class="cal-subtitle">${escapeHtml(s.subtitle || I18n.t('defaultSubtitle'))}</div>
     `;
     page.appendChild(hdr);
 
@@ -67,13 +68,13 @@ const CalView = (() => {
       if (t.mode === 'avatar_family') icon = makeFamilySVG(28, 28);
       else if (t.mode === 'avatar_heart') icon = makeHeartSVG(28, 28);
       else if (t.mode === 'photo') icon = t.photoUrl
-        ? `<img src="${t.photoUrl}" style="width:28px;height:28px;object-fit:cover;border-radius:7px">`
+        ? `<img src="${escapeHtml(t.photoUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:7px">`
         : `<span style="font-size:22px">📷</span>`;
-      else icon = `<span style="font-size:22px;line-height:1">${t.emoji||'💜'}</span>`;
+      else icon = `<span style="font-size:22px;line-height:1">${escapeHtml(t.emoji||'💜')}</span>`;
       return `
         <div class="legend-item">
           <div class="legend-swatch" style="background:${st.swatchBg};border:2px solid ${st.swatchBorder};display:flex;align-items:center;justify-content:center">${icon}</div>
-          <div>${t.label||''}<br><small style="color:${st.lblColor}">${t.sub||''}</small></div>
+          <div>${escapeHtml(t.label||'')}<br><small style="color:${st.lblColor}">${escapeHtml(t.sub||'')}</small></div>
         </div>`;
     }).join('');
     leg.querySelectorAll('.legend-item').forEach((el, i) => {
@@ -88,10 +89,9 @@ const CalView = (() => {
       addBtn.textContent = '+';
       addBtn.addEventListener('click', async e => {
         e.stopPropagation();
-        const TYPE_KEYS = ['together','away','type3','type4'];
         const newIdx = types.length;
         const isIt = I18n.currentLang() === 'it';
-        const allTypes = [...types, { key: TYPE_KEYS[newIdx] || `type${newIdx+1}`, emoji:'🌟', label: isIt ? `Tipo ${newIdx+1}` : `Type ${newIdx+1}`, sub:'', mode:'emoji' }];
+        const allTypes = [...types, { key: nextTypeKey(types), emoji:'🌟', label: isIt ? `Tipo ${newIdx+1}` : `Type ${newIdx+1}`, sub:'', mode:'emoji' }];
         SettingsManager.set({ types: allTypes });
         await SettingsManager.save();
         const saved = await Storage.load(_curCalKey);
@@ -166,7 +166,7 @@ const CalView = (() => {
       } else if (_typeDef.mode === 'photo') {
         wrap.className = 'day-icon-wrap';
         if (_typeDef.photoUrl) {
-          wrap.innerHTML = `<img src="${_typeDef.photoUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:7px">`;
+          wrap.innerHTML = `<img src="${escapeHtml(_typeDef.photoUrl)}" style="width:40px;height:40px;object-fit:cover;border-radius:7px">`;
         } else {
           wrap.className = 'day-icon-wrap emoji';
           wrap.textContent = '📷';
@@ -235,7 +235,7 @@ const CalView = (() => {
       const dd = days[day] || { type:'neutral' };
       let iconHtml = '';
       if (dd.image) {
-        iconHtml = `<div class="day-icon-wrap"><img src="${dd.image}" style="width:40px;height:40px;object-fit:cover;border-radius:7px"></div>`;
+        iconHtml = `<div class="day-icon-wrap"><img src="${escapeHtml(dd.image)}" style="width:40px;height:40px;object-fit:cover;border-radius:7px"></div>`;
       } else {
         const typeDef = types.find(t => t.key === dd.type);
         if (typeDef) {
@@ -245,16 +245,16 @@ const CalView = (() => {
             iconHtml = `<div class="day-icon-wrap">${makeHeartSVG(40,40)}</div>`;
           } else if (typeDef.mode === 'photo') {
             iconHtml = typeDef.photoUrl
-              ? `<div class="day-icon-wrap"><img src="${typeDef.photoUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:7px"></div>`
+              ? `<div class="day-icon-wrap"><img src="${escapeHtml(typeDef.photoUrl)}" style="width:40px;height:40px;object-fit:cover;border-radius:7px"></div>`
               : `<div class="day-icon-wrap" style="font-size:28px;display:flex;align-items:center;justify-content:center;width:40px;height:40px">📷</div>`;
           } else {
-            iconHtml = `<div class="day-icon-wrap" style="font-size:28px;display:flex;align-items:center;justify-content:center;width:40px;height:40px">${pdfSafe(typeDef.emoji||'💜')}</div>`;
+            iconHtml = `<div class="day-icon-wrap" style="font-size:28px;display:flex;align-items:center;justify-content:center;width:40px;height:40px">${pdfSafe(escapeHtml(typeDef.emoji||'💜'))}</div>`;
           }
         }
       }
       if (!iconHtml) {
         if (dd.icon) {
-          iconHtml = `<div class="day-icon-wrap emoji" style="font-size:24px;display:flex;align-items:center;justify-content:center;width:40px;height:40px">${dd.icon}</div>`;
+          iconHtml = `<div class="day-icon-wrap emoji" style="font-size:24px;display:flex;align-items:center;justify-content:center;width:40px;height:40px">${escapeHtml(dd.icon)}</div>`;
         } else {
           iconHtml = `<div style="height:40px"></div>`;
         }
@@ -264,8 +264,8 @@ const CalView = (() => {
       const _typeSt2  = TYPE_STYLES[_typeIdx2] || TYPE_STYLES[0];
       const lbl = _typeDef2 ? _typeDef2.label : (dd.label || '');
       const lblColor = _typeSt2?.lblColor || '#9333ea';
-      const lblHtml = lbl ? `<div class="day-lbl" style="font-size:7px;font-weight:800;text-align:center;color:${lblColor}">${pdfSafe(lbl)}</div>` : '';
-      cellsHtml += `<div class="day-cell ${dd.type||'neutral'}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${iconHtml}${lblHtml}</div>`;
+      const lblHtml = lbl ? `<div class="day-lbl" style="font-size:7px;font-weight:800;text-align:center;color:${lblColor}">${pdfSafe(escapeHtml(lbl))}</div>` : '';
+      cellsHtml += `<div class="day-cell ${escapeHtml(dd.type||'neutral')}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${iconHtml}${lblHtml}</div>`;
     }
 
     const wdayHtml = WDAYS.map((wd,i) =>
@@ -293,12 +293,12 @@ const CalView = (() => {
       if (t.mode === 'avatar_family') icon = makeFamilySVG(26, 26);
       else if (t.mode === 'avatar_heart') icon = makeHeartSVG(26, 26);
       else if (t.mode === 'photo') icon = t.photoUrl
-        ? `<img src="${t.photoUrl}" style="width:26px;height:26px;object-fit:cover;border-radius:7px">`
+        ? `<img src="${escapeHtml(t.photoUrl)}" style="width:26px;height:26px;object-fit:cover;border-radius:7px">`
         : `<span style="font-size:18px">📷</span>`;
-      else icon = `<span style="font-size:20px;line-height:1">${pdfSafe(t.emoji||'💜')}</span>`;
+      else icon = `<span style="font-size:20px;line-height:1">${pdfSafe(escapeHtml(t.emoji||'💜'))}</span>`;
       return `<div class="legend-item">
         <div class="legend-swatch" style="background:${st.swatchBg} !important;border:2px solid ${st.swatchBorder} !important">${icon}</div>
-        <div>${pdfSafe(t.label||'')}<br><small style="color:${st.lblColor}">${t.sub||''}</small></div>
+        <div>${pdfSafe(escapeHtml(t.label||''))}<br><small style="color:${st.lblColor}">${escapeHtml(t.sub||'')}</small></div>
       </div>`;
     }).join('');
 
@@ -313,12 +313,12 @@ const CalView = (() => {
       <div style="text-align:center;margin-bottom:10px;position:relative;z-index:1">
         <div class="rainbow-bar"></div>
         <div class="cal-title">${theme.emoji} ${MONTHS[month]||''} ${year} ${theme.emoji}</div>
-        <div class="cal-subtitle">${s.subtitle||I18n.t('defaultSubtitle')}</div>
+        <div class="cal-subtitle">${escapeHtml(s.subtitle||I18n.t('defaultSubtitle'))}</div>
       </div>
       <div class="cal-legend">${legendItemsHtml}</div>
       <div class="wdays">${wdayHtml}</div>
       <div class="days-grid">${cellsHtml}</div>
-      <div class="cal-footer">${pdfSafe(s.footer||I18n.t('defaultFooter'))}</div>`;
+      <div class="cal-footer">${pdfSafe(escapeHtml(s.footer||I18n.t('defaultFooter')))}</div>`;
 
     // In centered mode: deco wraps the content block (.cal-wrap), .page just centers
     // In fit mode: deco is on .page itself (full bleed), grid stretches to fill
@@ -328,7 +328,7 @@ const CalView = (() => {
 
     return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+${printFontCss()}
 @page{size:${PAGE_W_MM} ${PAGE_H_MM};margin:0}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Nunito',sans-serif;background:white;width:${PAGE_W_MM};height:${PAGE_H_MM}}
@@ -403,7 +403,7 @@ ${typesCss}
       if (opt.svgMode === 'family') iconDiv.innerHTML = makeFamilySVG(28, 28);
       else if (opt.svgMode === 'heart') iconDiv.innerHTML = makeHeartSVG(28, 28);
       else if (opt.svgMode === 'photo') iconDiv.innerHTML = opt.photoUrl
-        ? `<img src="${opt.photoUrl}" style="width:28px;height:28px;object-fit:cover;border-radius:7px">`
+        ? `<img src="${escapeHtml(opt.photoUrl)}" style="width:28px;height:28px;object-fit:cover;border-radius:7px">`
         : '📷';
       else iconDiv.textContent = opt.icon;
       el.appendChild(iconDiv);
@@ -413,21 +413,16 @@ ${typesCss}
       el.addEventListener('click', () => {
         typePicker.querySelectorAll('.type-opt').forEach(x => x.classList.remove('active'));
         el.classList.add('active');
-        // Bug fix: cliccare "Nessuno" deseleziona anche l'icona attiva
-        if (opt.type === 'neutral') {
-          document.querySelectorAll('#day-icon-picker .icon-opt').forEach(x => x.classList.remove('active'));
-        }
+        // Cliccare "Nessuno" deseleziona anche l'icona attiva
+        if (opt.type === 'neutral') _iconPicker?.setSelected('');
       });
       typePicker.appendChild(el);
     });
 
-    // Icon picker — comprehensive emoji selector
+    // Icon picker — comprehensive emoji selector. Selecting any emoji resets the type to "Nessuno".
     const iconPicker = document.getElementById('day-icon-picker');
-    buildEmojiPicker(iconPicker, dd.icon || '');
-    // Selecting any emoji resets the type picker to "Nessuno"
-    iconPicker.addEventListener('click', e => {
-      const opt = e.target.closest('.icon-opt');
-      if (opt && opt.dataset.emoji) {
+    _iconPicker = buildEmojiPicker(iconPicker, dd.icon || '', emoji => {
+      if (emoji) {
         typePicker.querySelectorAll('.type-opt').forEach(x =>
           x.classList.toggle('active', x.dataset.type === 'neutral')
         );
@@ -637,9 +632,8 @@ ${typesCss}
       const { day, calKey, year, month } = _editing;
 
       const activeType = document.querySelector('#day-type-picker .type-opt.active');
-      const activeIcon = document.querySelector('#day-icon-picker .icon-opt.active');
       const type  = activeType?.dataset.type || 'neutral';
-      const icon  = (type === 'neutral' && activeIcon) ? (activeIcon.dataset.emoji||'') : '';
+      const icon  = (type === 'neutral' && _iconPicker) ? _iconPicker.getSelected() : '';
       const image = _imgUrl || '';
       const note  = document.getElementById('day-notes').value.trim();
       const _sTypes = SettingsManager.get()?.types || [];
@@ -660,6 +654,22 @@ ${typesCss}
 
   return { render, initListeners, buildPrintHTML };
 })();
+
+// ── Shared helpers ───────────────────────────────────────────────
+// Day-type keys: the first free one, so deleting type 3 and adding a new type never reuses a key
+// still held by another type.
+const TYPE_KEYS = ['together','away','type3','type4'];
+function nextTypeKey(types) {
+  const used = new Set((types || []).map(t => t.key));
+  return TYPE_KEYS.find(k => !used.has(k)) || `type${Date.now()}`;
+}
+
+// Bundled Nunito for the print/PDF page. __FONT_BASE__ is replaced with the fonts folder URL:
+// "fonts/" for the in-app preview, a file:// URL for the PDF (main.js).
+function printFontCss() {
+  return `@font-face{font-family:'Nunito';font-style:normal;font-weight:200 1000;font-display:block;src:url('__FONT_BASE__nunito-latin.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Nunito';font-style:normal;font-weight:200 1000;font-display:block;src:url('__FONT_BASE__nunito-latin-ext.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}`;
+}
 
 // ── SVG avatars ──────────────────────────────────────────────────
 function makeFamilySVG(w, h) {

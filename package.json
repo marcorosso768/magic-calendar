@@ -1,6 +1,6 @@
 {
   "name": "magic-calendar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Calendario personalizzabile per tutte le famiglie con bambini",
   "main": "src/main.js",
   "scripts": {
@@ -19,8 +19,14 @@
       "buildResources": "build-resources"
     },
     "extraResources": [
-      { "from": "build-resources/icon-light.icns", "to": "." },
-      { "from": "build-resources/icon-dark.icns",  "to": "." }
+      {
+        "from": "build-resources/icon-light.icns",
+        "to": "."
+      },
+      {
+        "from": "build-resources/icon-dark.icns",
+        "to": "."
+      }
     ],
     "files": [
       "src/**/*",
@@ -38,31 +44,32 @@
     "mac": {
       "category": "public.app-category.lifestyle",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "build-resources/icon.icns",
       "darkModeSupport": true,
       "gatekeeperAssess": false,
       "hardenedRuntime": false,
-      "identity": null
+      "identity": null,
+      "artifactName": "Magic-Calendar-${version}-${arch}-mac.${ext}"
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "icon": "build-resources/icon.ico"
-    },
-    "dmg": {
-      "title": "Magic Calendar",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "background": "build-resources/dmg-background.png",
-      "icon": null,
-      "window": { "width": 540, "height": 380 },
-      "contents": [
-        { "x": 150, "y": 185, "type": "file" },
-        { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
-      ]
+      "icon": "build-resources/icon.ico",
+      "artifactName": "Magic-Calendar-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": true,

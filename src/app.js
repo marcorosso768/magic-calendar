@@ -5,8 +5,10 @@ const App = (() => {
   let year   = _now.getFullYear();
   let month  = _now.getMonth();
   let view   = 'monthly';
-  let calKey = null;
-  let _currentCalData = null; // keep reference for PDF export
+  let calKey = null;           // calendar shown in the monthly view; null = no calendar for this month
+  let _currentCalData = null;  // keep reference for PDF export
+  let _calIndex = [];          // [{ key, name, year, month }] of all saved calendars
+  let _nav = 0;                // increases at every navigation: older async steps stop when outdated
 
   async function init() {
     await SettingsManager.load();
@@ -31,14 +33,15 @@ const App = (() => {
       });
     });
 
-    // Month nav
+    // Month nav: switches to the calendar of that month (or shows an empty month), so edits
+    // always go to the calendar whose month is on screen.
     document.getElementById('prev-month').addEventListener('click', () => {
-      month--; if (month<0){month=11;year--;}
-      updateMonthLabel(); renderCurrent();
+      let y = year, m = month - 1; if (m < 0) { m = 11; y--; }
+      goToMonth(y, m);
     });
     document.getElementById('next-month').addEventListener('click', () => {
-      month++; if (month>11){month=0;year++;}
-      updateMonthLabel(); renderCurrent();
+      let y = year, m = month + 1; if (m > 11) { m = 0; y++; }
+      goToMonth(y, m);
     });
 
     // New calendar
@@ -55,18 +58,19 @@ const App = (() => {
     });
 
     document.getElementById('btn-new-confirm').addEventListener('click', async () => {
-      const sel   = document.getElementById('new-month');
-      const mName = sel.options[sel.selectedIndex]?.text || '';
-      const m     = parseInt(sel.value);
-      const y     = parseInt(document.getElementById('new-year').value);
-      const name  = document.getElementById('new-name').value.trim() || `${mName} ${y}`;
-      const key   = `${name.replace(/[^a-zA-Z0-9_\-]/g,'_').replace(/__+/g,'_')}_${y}_${m+1}`;
-      await Storage.save(key, { year:y, month:m, days:{}, name });
-      calKey=key; year=y; month=m;
+      const sel     = document.getElementById('new-month');
+      const yearInp = document.getElementById('new-year');
+      const m       = parseInt(sel.value, 10);
+      const y       = parseInt(yearInp.value, 10);
+      if (!Number.isInteger(y) || y < 1900 || y > 2200 || !(m >= 0 && m <= 11)) {
+        yearInp.classList.add('invalid');
+        yearInp.focus();
+        return;
+      }
+      yearInp.classList.remove('invalid');
+      const name = document.getElementById('new-name').value.trim();
+      await createCalendar(y, m, name);
       document.getElementById('modal-new').classList.add('hidden');
-      updateMonthLabel();
-      await refreshSavedList();
-      renderCurrent();
     });
 
     // ── Export preview modal ─────────────────────────────────────────
@@ -78,12 +82,16 @@ const App = (() => {
         return WeekView.buildPrintHTML(_expLandscape, _expCentered);
       }
       const saved = await Storage.load(calKey);
-      return CalView.buildPrintHTML(year, month, calKey, saved, _expLandscape, _expCentered);
+      return CalView.buildPrintHTML(saved?.year ?? year, saved?.month ?? month, calKey, saved, _expLandscape, _expCentered);
     }
 
+    // The monthly export needs a calendar; the weekly one does not.
+    const canExport = () => view === 'weekly' || !!calKey;
+
     async function refreshExportPreview() {
-      if (!calKey) return;
-      const html = await buildExportHTML();
+      if (!canExport()) return;
+      // Preview runs inside the app: the bundled fonts are at "fonts/" relative to index.html.
+      const html = (await buildExportHTML()).split('__FONT_BASE__').join('fonts/');
 
       // Dimensioni reali pagina PDF (px a 96 dpi)
       const PW = _expLandscape ? 1123 : 794;
@@ -113,7 +121,7 @@ const App = (() => {
 
     // Apre il modale di anteprima
     document.getElementById('btn-export').addEventListener('click', async () => {
-      if (!calKey) return;
+      if (!canExport()) return;
       _expLandscape = false;
       _expCentered  = true;
       document.getElementById('modal-export').classList.remove('hidden');
@@ -142,7 +150,7 @@ const App = (() => {
 
     // Salva PDF
     document.getElementById('btn-export-save').addEventListener('click', async () => {
-      if (!calKey) return;
+      if (!canExport()) return;
       const months   = I18n.ta('months');
       const isWeekly = view === 'weekly';
       const filename = isWeekly
@@ -183,6 +191,7 @@ const App = (() => {
         // Auto-hide after 5 s — a native dialog is shown by main.js too.
         setTimeout(hideBanner, 5000);
       });
+      window.api.onUpdateFailed?.(hideBanner);
     }
 
     // Close modals
@@ -192,6 +201,8 @@ const App = (() => {
       );
     });
     document.querySelectorAll('.modal').forEach(m => {
+      // The first-launch theme choice can only be closed with "Continue" (otherwise it reappears every launch).
+      if (m.id === 'modal-theme-welcome') return;
       m.addEventListener('click', e => { if (e.target===m) m.classList.add('hidden'); });
     });
 
@@ -203,20 +214,15 @@ const App = (() => {
     // Load saved calendars
     await refreshSavedList();
 
-    // Auto-select: preferisce il calendario del mese corrente
-    const list = await Storage.list();
-    if (list.length > 0) {
-      const curKey = list.find(k => k.includes(`_${year}_${month+1}`)) || list[0];
-      await selectCal(curKey);
+    // Auto-select: the calendar of the current month; otherwise create it if there are no calendars
+    // at all, or show the first one.
+    const current = _calIndex.find(c => c.year === year && c.month === month);
+    if (current) {
+      await selectCal(current.key);
+    } else if (_calIndex.length === 0) {
+      await createCalendar(year, month, '');
     } else {
-      // Crea calendario del mese corrente
-      const months = I18n.ta('months');
-      const name   = `${months[month]||'Calendario'} ${year}`;
-      const key    = `${name.replace(/[^a-zA-Z0-9_\-]/g,'_')}_${year}_${month+1}`;
-      await Storage.save(key, { year, month, days:{}, name });
-      calKey = key;
-      await refreshSavedList();
-      renderCurrent();
+      await selectCal(_calIndex[0].key);
     }
     updateMonthLabel();
 
@@ -225,14 +231,87 @@ const App = (() => {
     }
   }
 
-  async function renderCurrent() {
-    if (!calKey) return;
-    if (view === 'monthly') {
-      const saved = await Storage.load(calKey);
-      _currentCalData = saved;
-      CalView.render(year, month, calKey, saved);
+  async function renderCurrent(nav = _nav) {
+    if (view === 'weekly') {
+      await WeekView.render();
+      return;
+    }
+    if (!calKey) {
+      _currentCalData = null;
+      renderEmptyMonth();
+      return;
+    }
+    const saved = await Storage.load(calKey);
+    if (nav !== _nav) return;          // outdated: a newer navigation will draw
+    _currentCalData = saved;
+    // Always draw the month stored in the calendar, so the grid and the saved days never diverge.
+    CalView.render(saved?.year ?? year, saved?.month ?? month, calKey, saved);
+  }
+
+  // Month without a calendar: message and a button to create it.
+  function renderEmptyMonth() {
+    const months = I18n.ta('months');
+    const label  = `${months[month] || ''} ${year}`;
+    const cont   = document.getElementById('view-monthly');
+    cont.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'empty-month';
+    const msg = document.createElement('p');
+    msg.textContent = I18n.tf('noCalendarForMonth', label);
+    const btn = document.createElement('button');
+    btn.className = 'btn-accent';
+    btn.textContent = I18n.tf('createForMonth', label);
+    btn.addEventListener('click', () => createCalendar(year, month, ''));
+    box.append(msg, btn);
+    cont.appendChild(box);
+  }
+
+  // Calendar keys: a readable name plus year and month, made unique. Two calendars can never get
+  // the same key, so creating one never overwrites another.
+  function makeKey(name, y, m) {
+    const base = (name || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')
+      .slice(0, 60) || 'cal';
+    const stem = `${base}_${y}_${m + 1}`;
+    // macOS and Windows disks ignore case: "Ottobre_…" and "ottobre_…" would be the same file.
+    const taken = new Set(_calIndex.map(c => c.key.toLowerCase()));
+    let key = stem, n = 2;
+    while (taken.has(key.toLowerCase())) key = `${stem}_${n++}`;
+    return key;
+  }
+
+  let _creating = false;   // ignores double clicks while a calendar is being created
+  async function createCalendar(y, m, name) {
+    if (_creating) return;
+    _creating = true;
+    try {
+      const months = I18n.ta('months');
+      const finalName = name || `${months[m] || ''} ${y}`.trim();
+      await refreshSavedList();                     // up-to-date list before choosing the key
+      const data = { year: y, month: m, days: {}, name: finalName };
+      let key = makeKey(finalName, y, m);
+      // The main process refuses to overwrite an existing file: try the next free key.
+      for (let n = 2; !(await Storage.create(key, data)).ok; n++) key = `${makeKey(finalName, y, m)}_x${n}`;
+      await refreshSavedList();
+      await selectCal(key);
+    } finally {
+      _creating = false;
+    }
+  }
+
+  async function goToMonth(y, m) {
+    _nav++;
+    year = y; month = m;
+    const match = _calIndex.find(c => c.key === calKey && c.year === y && c.month === m)
+               || _calIndex.find(c => c.year === y && c.month === m);
+    if (match) {
+      await selectCal(match.key);
     } else {
-      await WeekView.render(calKey);
+      calKey = null;
+      markActive();
+      updateMonthLabel();
+      renderCurrent();
     }
   }
 
@@ -247,11 +326,14 @@ const App = (() => {
     const keys = await Storage.list();
     const list = document.getElementById('saved-list');
     list.innerHTML = '';
+    _calIndex = [];
     for (const k of keys) {
       const d    = await Storage.load(k);
       const name = d?.name || k.replace(/_/g,' ');
+      _calIndex.push({ key: k, name, year: d?.year, month: d?.month });
       const item = document.createElement('div');
       item.className = 'saved-item' + (k===calKey?' active':'');
+      item.dataset.key = k;
 
       const sp = document.createElement('span');
       sp.textContent = name;
@@ -267,16 +349,7 @@ const App = (() => {
           await Storage.delete(k);
           if (wasActive) calKey = null;
           await refreshSavedList();
-          if (wasActive) {
-            // Seleziona il primo calendario rimasto, se esiste
-            const remaining = await Storage.list();
-            if (remaining.length > 0) {
-              await selectCal(remaining[0]);
-            } else {
-              // Nessun calendario rimasto: svuota la vista
-              document.getElementById('view-monthly').innerHTML = '';
-            }
-          }
+          if (wasActive) renderCurrent();   // the month stays on screen, now without a calendar
         }
       });
       item.appendChild(del);
@@ -286,17 +359,22 @@ const App = (() => {
   }
 
   async function selectCal(key, data) {
+    const nav = ++_nav;
     calKey = key;
     if (!data) data = await Storage.load(key);
+    if (nav !== _nav) return;          // a newer click already moved elsewhere
     if (data?.year  !== undefined) year  = data.year;
     if (data?.month !== undefined) month = data.month;
     updateMonthLabel();
+    markActive();
+    await renderCurrent(nav);
+  }
+
+  // Highlights the selected calendar by key (two calendars may share a name).
+  function markActive() {
     document.querySelectorAll('.saved-item').forEach(el => {
-      el.classList.toggle('active',
-        el.querySelector('span')?.textContent === (data?.name||key.replace(/_/g,' '))
-      );
+      el.classList.toggle('active', el.dataset.key === calKey);
     });
-    renderCurrent();
   }
 
   function updateMonthLabel() {

@@ -84,12 +84,15 @@ const EMOJI_CATS = [
 /**
  * Build a comprehensive emoji picker inside `container`.
  *
- * Items use `.icon-opt` / `.icon-opt.active` classes so existing
- * save-handlers (which query `#picker .icon-opt.active`) keep working.
+ * Items use `.icon-opt` / `.icon-opt.active` classes for display; save handlers read the value
+ * through the returned getSelected().
  *
  * @param {HTMLElement} container  — #hour-icon-picker or #day-icon-picker
  * @param {string}      initEmoji  — currently selected emoji ('' = free/none)
  * @param {function}    onSelect   — optional callback(emoji: string)
+ * @returns {{getSelected: function(): string, setSelected: function(string)}}
+ *   Save handlers read the value from here (not from the DOM): the DOM only shows the
+ *   current tab, so an emoji from another tab would otherwise read as "none".
  */
 function buildEmojiPicker(container, initEmoji, onSelect) {
   const lang = I18n.currentLang();
@@ -97,10 +100,13 @@ function buildEmojiPicker(container, initEmoji, onSelect) {
   let searchQuery = '';
   let selected = typeof initEmoji === 'string' ? initEmoji : '';
 
-  // Populate 'fav' with user's allIcons()
+  // Populate 'fav' with user's allIcons(); the current emoji is always shown first if it is not
+  // already a favorite (picked from another tab or pasted), so it appears selected on opening.
   const cats = EMOJI_CATS.map(c => {
     if (c.id !== 'fav') return c;
-    return { ...c, emojis: SettingsManager.allIcons().map(i => i.emoji) };
+    const favs = SettingsManager.allIcons().map(i => i.emoji);
+    if (selected && !favs.includes(selected)) favs.unshift(selected);
+    return { ...c, emojis: favs };
   });
 
   container.innerHTML = '';
@@ -184,7 +190,7 @@ function buildEmojiPicker(container, initEmoji, onSelect) {
       el.dataset.emoji = emoji;
       // In fav tab: show label; in other tabs: emoji only (compact)
       if (isFav && lbl) {
-        el.innerHTML = `<span>${emoji}</span><div class="icon-opt-lbl">${lbl}</div>`;
+        el.innerHTML = `<span>${escapeHtml(emoji)}</span><div class="icon-opt-lbl">${escapeHtml(lbl)}</div>`;
       } else {
         el.textContent = emoji;
       }
@@ -228,4 +234,12 @@ function buildEmojiPicker(container, initEmoji, onSelect) {
     const cat = cats.find(c => c.id === activeCat);
     return cat?.emojis || [];
   }
+
+  return {
+    getSelected: () => selected,
+    setSelected: (emoji) => {
+      selected = emoji || '';
+      grid.querySelectorAll('.icon-opt').forEach(x => x.classList.toggle('active', (x.dataset.emoji || '') === selected));
+    },
+  };
 }

@@ -1,5 +1,13 @@
 name: Build & Release
 
+# Every push to main builds the app (to catch build errors). A tag vX.Y.Z also publishes a release.
+# Release: set "version" in package.json to X.Y.Z, update build-resources/release-notes.md, commit,
+# then push the tag vX.Y.Z (see README).
+#
+# Release assets:
+#   macOS   Magic-Calendar-X.Y.Z-arm64.dmg / -x64.dmg   (dmgbuild: HFS+ with background and layout)
+#           Magic-Calendar-X.Y.Z-arm64-mac.zip / -x64-mac.zip + latest-mac.yml   (used by in-app updates)
+#   Windows Magic-Calendar-Setup-X.Y.Z.exe + latest.yml (+ .blockmap)            (used by in-app updates)
 on:
   push:
     branches:
@@ -10,6 +18,9 @@ on:
 
 permissions:
   contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-mac:
@@ -24,27 +35,43 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Check that the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "v$v" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version $v"; exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
 
-      # Builds DMG (x64 + arm64), ZIP (x64 + arm64), and the update
-      # metadata file `latest-mac.yml`, then uploads everything to the
-      # GitHub release matching the current tag.
-      # `--publish always` reuses the `build.publish` config in package.json.
-      - name: Build Mac DMG + ZIP + update metadata and publish
-        run: npx electron-builder --mac dmg zip --x64 --arm64 --publish always
+      # App bundles (dist/mac, dist/mac-arm64), zips and latest-mac.yml. Nothing is uploaded here:
+      # the release is created by the publish job once both platforms are built.
+      - name: Build Mac app + zips + update metadata
+        run: npx electron-builder --mac zip --x64 --arm64 --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload Mac artifacts (for manual inspection)
-        if: always()
+      - name: Install dmgbuild
+        run: pip3 install dmgbuild --break-system-packages
+
+      - name: Create DMGs
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          dmgbuild -s build-resources/dmgbuild-settings.py -D "app=dist/mac/Magic Calendar.app" \
+            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-x64.dmg"
+          dmgbuild -s build-resources/dmgbuild-settings.py -D "app=dist/mac-arm64/Magic Calendar.app" \
+            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-arm64.dmg"
+
+      - name: Upload Mac artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mac-build
           path: |
             dist/*.dmg
             dist/*.zip
+            dist/*.blockmap
             dist/latest-mac.yml
           retention-days: 14
 
@@ -63,19 +90,42 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Builds the NSIS installer + update metadata `latest.yml`
-      # and publishes to the GitHub release matching the tag.
-      - name: Build Windows NSIS and publish
-        run: npx electron-builder --win nsis --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Windows installer + update metadata
+        run: npx electron-builder --win nsis --publish never
 
-      - name: Upload Windows artifacts (for manual inspection)
-        if: always()
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: win-build
           path: |
             dist/*.exe
+            dist/*.blockmap
             dist/latest.yml
           retention-days: 14
+
+  # Only for tags, and only if both platforms built: one release with all the files, so the app never
+  # sees a release that has the update files of just one platform.
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (release notes)
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls -l dist
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "Magic Calendar ${GITHUB_REF_NAME#v}" \
+            --notes-file build-resources/release-notes.md \
+            --latest

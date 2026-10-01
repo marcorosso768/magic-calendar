@@ -66,12 +66,18 @@ const TRANSLATIONS = {
     timeFormatSection:'🕐 Formato orario',
     timeFormat24h:'24h (00:00–23:59)',
     timeFormat12h:'12h (AM/PM)',
-    welcomeThemeTitle:'Choose your style',
-    welcomeThemeSubtitle:'Choose your default theme. You can change it anytime in Settings.',
-    continueLabel:'Continue',
+    welcomeThemeTitle:'Scegli il tuo stile',
+    welcomeThemeSubtitle:'Scegli il tema predefinito. Puoi cambiarlo quando vuoi nelle Impostazioni.',
+    continueLabel:'Continua',
     versionLabel:'Versione',
     updateDownloading:'Scaricamento aggiornamento…',
     updateReady:'Aggiornamento pronto',
+    noCalendarForMonth:(m)=>`Non c’è ancora un calendario per ${m}.`,
+    createForMonth:(m)=>`＋ Crea il calendario di ${m}`,
+    confirmDeleteImage:(n)=> n
+      ? `Questa immagine è usata in ${n} ${n===1?'punto':'punti'} (giorni o tipi di giorno): verrà tolta anche da lì. Eliminarla?`
+      : 'Eliminare questa immagine?',
+    newIconLabelPh:'Chitarra',
   },
   en: {
     appName:'Magic Calendar', monthly:'Monthly', weekly:'Weekly',
@@ -144,6 +150,12 @@ const TRANSLATIONS = {
     versionLabel:'Version',
     updateDownloading:'Downloading update…',
     updateReady:'Update ready',
+    noCalendarForMonth:(m)=>`There is no calendar for ${m} yet.`,
+    createForMonth:(m)=>`＋ Create the ${m} calendar`,
+    confirmDeleteImage:(n)=> n
+      ? `This image is used in ${n} ${n===1?'place':'places'} (days or day types): it will be removed there too. Delete it?`
+      : 'Delete this image?',
+    newIconLabelPh:'Guitar',
   },
 };
 
