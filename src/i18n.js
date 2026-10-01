@@ -69,7 +69,9 @@ const TRANSLATIONS = {
     welcomeThemeTitle:'Choose your style',
     welcomeThemeSubtitle:'Choose your default theme. You can change it anytime in Settings.',
     continueLabel:'Continue',
-    versionLabel:'Version',
+    versionLabel:'Versione',
+    updateDownloading:'Scaricamento aggiornamento…',
+    updateReady:'Aggiornamento pronto',
   },
   en: {
     appName:'Magic Calendar', monthly:'Monthly', weekly:'Weekly',
@@ -140,6 +142,8 @@ const TRANSLATIONS = {
     welcomeThemeSubtitle:'Choose your default theme. You can change it anytime in Settings.',
     continueLabel:'Continue',
     versionLabel:'Version',
+    updateDownloading:'Downloading update…',
+    updateReady:'Update ready',
   },
 };
 

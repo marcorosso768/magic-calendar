@@ -19,21 +19,9 @@
       "buildResources": "build-resources"
     },
     "extraResources": [
-      {
-        "from": "build-resources/icon-light.icns",
-        "to": "."
-      },
-      {
-        "from": "build-resources/icon-dark.icns",
-        "to": "."
-      }
+      { "from": "build-resources/icon-light.icns", "to": "." },
+      { "from": "build-resources/icon-dark.icns",  "to": "." }
     ],
-    "mac": {
-      "icon": "build-resources/icon.icns"
-    },
-    "dmg": {
-      "icon": null
-    },
     "files": [
       "src/**/*",
       "assets/**/*",
@@ -50,20 +38,8 @@
     "mac": {
       "category": "public.app-category.lifestyle",
       "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
       ],
       "icon": "build-resources/icon.icns",
       "darkModeSupport": true,
@@ -73,12 +49,7 @@
     },
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
+        { "target": "nsis", "arch": ["x64"] }
       ],
       "icon": "build-resources/icon.ico"
     },
@@ -86,22 +57,11 @@
       "title": "Magic Calendar",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "background": "build-resources/dmg-background.png",
-      "window": {
-        "width": 540,
-        "height": 380
-      },
+      "icon": null,
+      "window": { "width": 540, "height": 380 },
       "contents": [
-        {
-          "x": 150,
-          "y": 185,
-          "type": "file"
-        },
-        {
-          "x": 390,
-          "y": 185,
-          "type": "link",
-          "path": "/Applications"
-        }
+        { "x": 150, "y": 185, "type": "file" },
+        { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
       ]
     },
     "nsis": {
@@ -118,6 +78,9 @@
         "repo": "magic-calendar"
       }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^28.3.3",

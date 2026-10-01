@@ -6,20 +6,33 @@ contextBridge.exposeInMainWorld('api', {
   calLoad:   (key)       => ipcRenderer.invoke('cal:load',   { key }),
   calList:   ()          => ipcRenderer.invoke('cal:list'),
   calDelete: (key)       => ipcRenderer.invoke('cal:delete', { key }),
+
   // Settings
   settingsSave: (s)  => ipcRenderer.invoke('settings:save', s),
   settingsLoad: ()   => ipcRenderer.invoke('settings:load'),
+
   // App metadata / menu
   appInfo:    ()     => ipcRenderer.invoke('app:info'),
   onOpenSettings: (callback) => ipcRenderer.on('menu:open-settings', () => callback()),
+
   // Images
   imagePick:   ()        => ipcRenderer.invoke('image:pick'),
   imageList:   ()        => ipcRenderer.invoke('image:list'),
   imageDelete: (url)     => ipcRenderer.invoke('image:delete', { url }),
+
   // PDF
   pdfExport: (html, name, landscape) => ipcRenderer.invoke('pdf:export', { html, filename: name, landscape }),
-  // Shell
+
+  // Shell (URL scheme validated in main)
   openLink:  (url)   => ipcRenderer.invoke('shell:open', url),
-  // Dock icon (macOS) — sincronizza con il tema effettivo dell'app
+
+  // Dock / window icon (macOS + Windows) — renderer is the source of truth
+  // for the effective app theme (light/dark/auto resolved against the OS).
   setDockDark: (isDark) => ipcRenderer.send('dock:set-dark', isDark),
+
+  // Auto-update
+  checkForUpdates: ()                 => ipcRenderer.invoke('update:check'),
+  onUpdateDownloading: (cb)           => ipcRenderer.on('update:downloading', () => cb()),
+  onUpdateProgress: (cb)              => ipcRenderer.on('update:progress', (_e, p) => cb(p)),
+  onUpdateDownloaded: (cb)            => ipcRenderer.on('update:downloaded', (_e, info) => cb(info)),
 });

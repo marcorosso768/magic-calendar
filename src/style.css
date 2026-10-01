@@ -35,25 +35,28 @@ body.is-macos {
   background: transparent;
 }
 
-/* macOS glass — light mode */
+/* macOS Liquid Glass — AppKit paints the window chrome (border,
+   shadow, rounded corners). Keep panes mostly transparent so the
+   underlying vibrancy view (glass) shows through. We only apply
+   faint tints to carry the palette. Do NOT re-apply backdrop-filter
+   or box-shadow here: doubling the glass destroys the system look. */
 body.is-macos #app-shell {
   overflow: hidden;
-  border-radius: 12px;
-  background: rgba(245, 240, 255, 0.72);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  box-shadow: 0 8px 32px rgba(0,0,0,.10), inset 0 1px 0 rgba(255,255,255,.7);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 body.is-macos #sidebar {
   padding-top: 20px;
-  background: rgba(232, 222, 255, 0.80);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  background: rgba(255, 255, 255, 0.06);
+  border-right-color: rgba(0, 0, 0, 0.06);
 }
 
 body.is-macos #main {
-  background: rgba(250, 246, 255, 0.60);
+  background: transparent;
 }
 
 /* ── Sidebar ─────────────────────────────────────────── */
@@ -765,16 +768,17 @@ html.dark {
 }
 
 html.dark body { background: #120d1e; }
-/* macOS glass — dark mode */
+/* macOS Liquid Glass — dark: again, AppKit handles chrome. */
 html.dark body.is-macos { background: transparent; }
 html.dark body.is-macos #app-shell {
-  background: rgba(18, 12, 28, 0.48);
-  box-shadow: 0 10px 38px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06);
+  background: transparent;
+  box-shadow: none;
 }
 html.dark body.is-macos #sidebar {
-  background: rgba(30, 18, 48, 0.70);
+  background: rgba(0, 0, 0, 0.18);
+  border-right-color: rgba(255, 255, 255, 0.06);
 }
-html.dark body.is-macos #main { background: rgba(17, 10, 27, 0.54); }
+html.dark body.is-macos #main { background: transparent; }
 
 /* Sidebar */
 html.dark #sidebar { background: #1e1230; border-right-color: #2d1a4a; }
@@ -932,3 +936,49 @@ html.dark ::-webkit-scrollbar-thumb:hover { background: #c084fc; }
 html.dark .btn-sm.active-mode { background: #2a1845; border-color: #c084fc; color: #c084fc; }
 html.dark #export-preview-wrap { border-color: #3d2060; background: #1e1230; }
 html.dark #export-iframe { background: #1e1230; }
+
+/* ── Auto-update banner ─────────────────────────────────────── */
+.update-banner {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  transition: opacity .2s, transform .2s;
+}
+.update-banner.hidden { display: none; }
+.update-banner #update-banner-icon { font-size: 16px; }
+.update-banner #update-banner-text { flex: 1; }
+#update-banner-progress {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+  margin-top: 2px;
+}
+#update-banner-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width .25s ease;
+}
+html.dark .update-banner {
+  background: rgba(30, 18, 48, 0.82);
+  border-color: #3d2060;
+  color: #e9d5ff;
+}

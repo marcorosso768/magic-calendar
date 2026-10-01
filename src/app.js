@@ -151,8 +151,39 @@ const App = (() => {
       const html = await buildExportHTML();
       const res  = await window.api.pdfExport(html, filename, _expLandscape);
       if (res?.ok) document.getElementById('modal-export').classList.add('hidden');
-      else console.log('PDF export cancelled');
+      // If the user cancelled the dialog, keep the export modal open silently.
     });
+
+    // Auto-update UI — show a small non-blocking banner while the update
+    // is downloading; native dialogs in main.js handle confirmation.
+    if (window.api) {
+      const banner = document.getElementById('update-banner');
+      const barEl  = document.getElementById('update-banner-bar');
+      const txtEl  = document.getElementById('update-banner-text');
+      const showBanner = (text) => {
+        if (!banner) return;
+        banner.classList.remove('hidden');
+        if (txtEl) txtEl.textContent = text;
+      };
+      const hideBanner = () => { if (banner) banner.classList.add('hidden'); };
+
+      window.api.onUpdateDownloading?.(() => {
+        if (barEl) barEl.style.width = '0%';
+        showBanner(I18n.t('updateDownloading') || 'Downloading update…');
+      });
+      window.api.onUpdateProgress?.((p) => {
+        if (barEl) barEl.style.width = `${Math.max(0, Math.min(100, p.percent || 0))}%`;
+        showBanner(`${I18n.t('updateDownloading') || 'Downloading update…'} ${Math.round(p.percent || 0)}%`);
+      });
+      window.api.onUpdateDownloaded?.((info) => {
+        if (barEl) barEl.style.width = '100%';
+        showBanner(
+          (I18n.t('updateReady') || 'Update ready') + (info?.version ? ` (v${info.version})` : '')
+        );
+        // Auto-hide after 5 s — a native dialog is shown by main.js too.
+        setTimeout(hideBanner, 5000);
+      });
+    }
 
     // Close modals
     document.querySelectorAll('[data-close]').forEach(btn => {

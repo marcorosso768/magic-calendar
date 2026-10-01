@@ -202,8 +202,14 @@
   </div>
 </div>
 
+<!-- Update banner (hidden by default, managed by app.js) -->
+<div id="update-banner" class="update-banner hidden" role="status" aria-live="polite">
+  <span id="update-banner-icon">⬇️</span>
+  <span id="update-banner-text">Downloading update…</span>
+  <div id="update-banner-progress"><div id="update-banner-bar"></div></div>
+</div>
+
 <!-- Scripts in correct order: i18n already loaded in <head> -->
-<script src="themes.js"></script>
 <script src="storage.js"></script>
 <script src="settings.js"></script>
 <script src="emoji-picker.js"></script>

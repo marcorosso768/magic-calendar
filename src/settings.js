@@ -662,6 +662,8 @@ function updateStaticStrings() {
   const logo = document.getElementById('logo');
   if (logo) logo.querySelector('span').textContent = I18n.t('appName');
   document.title = I18n.t('appName');
+  // Keep <html lang> in sync with the active UI language.
+  try { document.documentElement.lang = I18n.currentLang(); } catch (_) {}
   // Export preview modal strings
   const exportStrings = {
     'export-preview-title': I18n.t('exportPreview'),
