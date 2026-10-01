@@ -311,7 +311,15 @@ function releaseNotesText(info) {
   const notes = Array.isArray(info.releaseNotes)
     ? info.releaseNotes.map(n => n.note || '').join('\n')
     : String(info.releaseNotes);
-  return notes.replace(/<[^>]+>/g, '').trim().slice(0, 800) || T('youHave', app.getVersion());
+  // Release notes are Markdown (build-resources/release-notes.md): shown as plain text in the dialog.
+  const plain = notes
+    .replace(/<[^>]+>/g, '')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/^\s*[-*]\s+/gm, '• ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return plain.slice(0, 800) || T('youHave', app.getVersion());
 }
 
 async function installMacUpdate(info) {

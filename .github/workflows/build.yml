@@ -126,6 +126,6 @@ jobs:
           ls -l dist
           gh release create "${GITHUB_REF_NAME}" dist/* \
             --repo "${GITHUB_REPOSITORY}" \
-            --title "Magic Calendar ${GITHUB_REF_NAME#v}" \
+            --title "Magic Calendar ${GITHUB_REF_NAME}" \
             --notes-file build-resources/release-notes.md \
             --latest

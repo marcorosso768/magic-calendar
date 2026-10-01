@@ -1,23 +1,25 @@
-**Magic Calendar 1.1.0**
+## 🦄 Magic Calendar v1.1.0
 
-- Le frecce del mese mostrano il calendario di quel mese (o propongono di crearlo) e non modificano più il calendario sbagliato.
-- Creare un nuovo calendario non può più sovrascriverne uno esistente.
-- Le icone dei giorni e delle fasce orarie non si perdono più modificando solo la nota.
-- Salvataggi più sicuri: un file danneggiato non impedisce più l'avvio e viene recuperata la copia precedente.
-- La routine settimanale è ora unica per tutti i calendari.
-- Eliminare un'immagine in uso chiede conferma e la toglie dai giorni che la usavano.
-- PDF: margini corretti, immagini e carattere Nunito inclusi (funziona anche offline).
-- Impostazioni chiuse senza salvare: le modifiche vengono annullate.
-- Finestre tradotte in inglese, aggiornamenti automatici su Mac e Windows.
+A stability release: safer saving, several bug fixes and automatic updates.
 
----
+### ✨ What's new
+- Automatic updates on macOS and Windows: the app tells you when a new version is available and installs it for you
+- Weekly routine shared by all your calendars
+- Interface fully available in English and Italian
+- PDF export works offline, with correct margins and all images
 
-- Month arrows now show that month's calendar (or offer to create it) and no longer edit the wrong one.
-- Creating a calendar can no longer overwrite an existing one.
-- Day and time-slot icons are kept when you only edit the note.
-- Safer saving: a damaged file no longer stops the app from starting; the previous copy is restored.
-- The weekly routine is now shared by all calendars.
-- Deleting an image in use asks first and removes it from the days that used it.
-- PDF: correct margins, images and the Nunito font included (works offline).
-- Settings closed without saving are now reverted.
-- Translated dialogs, automatic updates on Mac and Windows.
+### 🐞 Fixes
+- The month arrows now open that month's calendar (or offer to create it) instead of editing another month
+- Creating a calendar can no longer overwrite an existing one
+- Day and time-slot icons are kept when you only change the note
+- A damaged file no longer stops the app from starting: the previous copy is restored
+- Deleting an image that is in use asks first and removes it from the days that used it
+- Closing Settings without saving now discards the changes
+
+### 🖥️ Platforms
+- macOS (Apple Silicon and Intel)
+- Windows
+
+### 📦 Notes
+If you have version 1.0.0, download and install this version once by hand: from 1.1.0 on, updates are automatic.
+Calendars created with 1.0.0 are converted automatically the first time you open them.
