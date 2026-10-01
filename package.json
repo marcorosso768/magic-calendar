@@ -20,11 +20,11 @@
     },
     "extraResources": [
       {
-        "from": "build-resources/icon-light.icns",
+        "from": "build-resources/icon-light.png",
         "to": "."
       },
       {
-        "from": "build-resources/icon-dark.icns",
+        "from": "build-resources/icon-dark.png",
         "to": "."
       }
     ],

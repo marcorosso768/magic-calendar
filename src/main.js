@@ -29,10 +29,13 @@ function setDockIcon(isDark) {
   if (process.platform !== 'darwin' || !app.dock) return;
   try {
     const variant = isDark ? 'dark' : 'light';
-    const iconPath = iconResourcePath('icns', variant);
+    // PNG, not .icns: nativeImage only reads PNG/JPEG (and ICO on Windows), an .icns gives an
+    // empty image and the Dock kept the light icon.
+    const iconPath = iconResourcePath('png', variant);
     if (!fs.existsSync(iconPath)) { console.warn(`[dock] icon not found: ${iconPath}`); return; }
     const image = nativeImage.createFromPath(iconPath);
-    if (!image.isEmpty()) app.dock.setIcon(image);
+    if (image.isEmpty()) { console.warn(`[dock] cannot read ${iconPath}`); return; }
+    app.dock.setIcon(image);
   } catch (err) {
     console.warn('[dock] update failed:', err);
   }
@@ -42,7 +45,7 @@ function setWindowIconWin(isDark) {
   if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return;
   try {
     const variant = isDark ? 'dark' : 'light';
-    const iconPath = iconResourcePath('ico', variant);
+    const iconPath = iconResourcePath('png', variant);
     if (!fs.existsSync(iconPath)) return; // graceful: keep the default .ico
     const image = nativeImage.createFromPath(iconPath);
     if (!image.isEmpty()) mainWindow.setIcon(image);
