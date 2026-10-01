@@ -1,0 +1,42 @@
+{
+  "fill" : {
+    "solid" : "srgb:0.96078,0.96078,0.96863,1.00000"
+  },
+  "fill-specializations" : [
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "srgb:0.10980,0.07451,0.18824,1.00000"
+      }
+    }
+  ],
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "calendar-light.png",
+          "image-name-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "calendar-dark.png"
+            }
+          ],
+          "name" : "Calendar"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}

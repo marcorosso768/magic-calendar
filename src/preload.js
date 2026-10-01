@@ -31,9 +31,6 @@ contextBridge.exposeInMainWorld('api', {
   // Shell (URL scheme validated in main)
   openLink:  (url)   => ipcRenderer.invoke('shell:open', url),
 
-  // Dock / window icon (macOS + Windows) — renderer is the source of truth
-  // for the effective app theme (light/dark/auto resolved against the OS).
-  setDockDark: (isDark) => ipcRenderer.send('dock:set-dark', isDark),
   refreshMenu: ()       => ipcRenderer.send('menu:refresh'),
 
   // Auto-update

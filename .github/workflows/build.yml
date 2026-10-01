@@ -24,10 +24,18 @@ env:
 
 jobs:
   build-mac:
-    runs-on: macos-latest
+    # macOS 26 with Xcode 26: needed to compile the Icon Composer icon (light/dark) with actool.
+    runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Xcode 26 (actool for the app icon)
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XC" ]; then sudo xcode-select -s "$XC"; fi
+          xcodebuild -version
+          xcrun actool --version
 
       - name: Setup Node
         uses: actions/setup-node@v4

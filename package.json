@@ -18,16 +18,6 @@
       "output": "dist",
       "buildResources": "build-resources"
     },
-    "extraResources": [
-      {
-        "from": "build-resources/icon-light.png",
-        "to": "."
-      },
-      {
-        "from": "build-resources/icon-dark.png",
-        "to": "."
-      }
-    ],
     "files": [
       "src/**/*",
       "assets/**/*",

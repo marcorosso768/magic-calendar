@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, protocol, net } = require('electron');
 app.setName('Magic Calendar');
 const path = require('path');
 const fs   = require('fs');
@@ -15,49 +15,9 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow;
 
-// ──────────────────────────────────────────────────────────────
-// Icon resources — theme-aware Dock (macOS) and window (Windows)
-// ──────────────────────────────────────────────────────────────
-function iconResourcePath(ext, variant) {
-  const base = app.isPackaged
-    ? process.resourcesPath
-    : path.join(app.getAppPath(), 'build-resources');
-  return path.join(base, `icon-${variant}.${ext}`);
-}
-
-function setDockIcon(isDark) {
-  if (process.platform !== 'darwin' || !app.dock) return;
-  try {
-    const variant = isDark ? 'dark' : 'light';
-    // PNG, not .icns: nativeImage only reads PNG/JPEG (and ICO on Windows), an .icns gives an
-    // empty image and the Dock kept the light icon.
-    const iconPath = iconResourcePath('png', variant);
-    if (!fs.existsSync(iconPath)) { console.warn(`[dock] icon not found: ${iconPath}`); return; }
-    const image = nativeImage.createFromPath(iconPath);
-    if (image.isEmpty()) { console.warn(`[dock] cannot read ${iconPath}`); return; }
-    app.dock.setIcon(image);
-  } catch (err) {
-    console.warn('[dock] update failed:', err);
-  }
-}
-
-function setWindowIconWin(isDark) {
-  if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return;
-  try {
-    const variant = isDark ? 'dark' : 'light';
-    const iconPath = iconResourcePath('png', variant);
-    if (!fs.existsSync(iconPath)) return; // graceful: keep the default .ico
-    const image = nativeImage.createFromPath(iconPath);
-    if (!image.isEmpty()) mainWindow.setIcon(image);
-  } catch (err) {
-    console.warn('[win-icon] update failed:', err);
-  }
-}
-
-function applyThemedIcon(isDark) {
-  setDockIcon(isDark);
-  setWindowIconWin(isDark);
-}
+// App icon: fixed, from the bundle. On macOS 26+ the bundle has an Icon Composer icon with a light and
+// a dark appearance (build-scripts/afterPack.js), switched by the system also while the app is closed.
+// The app no longer changes the Dock icon at runtime: that only worked while it was open.
 
 function sendToRenderer(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -451,7 +411,6 @@ function checkPreviousMacUpdate() {
 // Theme — single source of truth is the renderer (it already
 // resolves the user's light/dark/auto preference against the OS).
 // ──────────────────────────────────────────────────────────────
-ipcMain.on('dock:set-dark', (_, isDark) => applyThemedIcon(!!isDark));
 // Menu labels follow the UI language: rebuilt when the language changes in Settings.
 ipcMain.on('menu:refresh', () => buildAppMenu());
 
@@ -470,8 +429,6 @@ app.whenReady().then(() => {
 
   createWindow();
   buildAppMenu();
-  // Initial icon — renderer will correct it once SettingsManager resolves.
-  applyThemedIcon(nativeTheme.shouldUseDarkColors);
 
   app.setAboutPanelOptions({
     applicationName: 'Magic Calendar',
