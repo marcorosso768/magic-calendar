@@ -21,8 +21,7 @@
               "value": "calendar-dark.png"
             }
           ],
-          "name": "Calendar",
-          "glass": false
+          "name": "Calendar"
         }
       ],
       "shadow": {
@@ -32,8 +31,7 @@
       "translucency": {
         "enabled": false,
         "value": 0.5
-      },
-      "specular": false
+      }
     }
   ],
   "supported-platforms": {
