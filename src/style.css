@@ -43,33 +43,8 @@ body {
   min-height: 0;
 }
 
-body.is-macos {
-  background: transparent;
-}
-
-/* macOS Liquid Glass — AppKit paints the window chrome (border,
-   shadow, rounded corners). Keep panes mostly transparent so the
-   underlying vibrancy view (glass) shows through. We only apply
-   faint tints to carry the palette. Do NOT re-apply backdrop-filter
-   or box-shadow here: doubling the glass destroys the system look. */
-body.is-macos #app-shell {
-  overflow: hidden;
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-
-body.is-macos #sidebar {
-  padding-top: 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border-right-color: rgba(0, 0, 0, 0.06);
-}
-
-body.is-macos #main {
-  background: transparent;
-}
+/* macOS: solid panes (no vibrancy). The sidebar leaves room for the traffic lights. */
+body.is-macos #sidebar { padding-top: 20px; }
 
 /* ── Sidebar ─────────────────────────────────────────── */
 #sidebar {
@@ -109,7 +84,7 @@ body.is-macos #main {
 
 .sidebar-label {
   font-size: 10px; font-weight: 800; letter-spacing: .9px;
-  text-transform: uppercase; color: var(--border);
+  text-transform: uppercase; color: #8b6bb8;   /* readable on the sidebar (was the border colour) */
   padding: 10px 4px 4px;
 }
 
@@ -186,7 +161,7 @@ body.is-macos #main {
 /* ── Main ────────────────────────────────────────────── */
 #main { flex: 1; overflow: hidden; display: flex; }
 
-.view { display: none; flex: 1; overflow: auto; padding: 20px; }
+.view { display: none; flex: 1; overflow: auto; padding: 0; }
 .view.active { display: flex; flex-direction: column; }
 
 /* ── Calendar page ───────────────────────────────────── */
@@ -780,24 +755,13 @@ html.dark {
 }
 
 html.dark body { background: #120d1e; }
-/* macOS Liquid Glass — dark: again, AppKit handles chrome. */
-html.dark body.is-macos { background: transparent; }
-html.dark body.is-macos #app-shell {
-  background: transparent;
-  box-shadow: none;
-}
-html.dark body.is-macos #sidebar {
-  background: rgba(0, 0, 0, 0.18);
-  border-right-color: rgba(255, 255, 255, 0.06);
-}
-html.dark body.is-macos #main { background: transparent; }
 
 /* Sidebar */
 html.dark #sidebar { background: #1e1230; border-right-color: #2d1a4a; }
 html.dark .logo { color: #c084fc; border-bottom-color: #2d1a4a; }
 html.dark .nav-btn { color: #9d6fd4; }
 html.dark .nav-btn:hover, html.dark .nav-btn.active { background: #2a1845; color: #c084fc; }
-html.dark .sidebar-label { color: #3d2060; }
+html.dark .sidebar-label { color: #8f6cc0; }
 html.dark .month-nav span { color: #c084fc; }
 html.dark .saved-item:hover  { background: #2a1845; }
 html.dark .saved-item.active { background: #2a1845; border-color: #3d2060; }
@@ -1005,3 +969,12 @@ html.dark .update-banner {
 
 /* Invalid value in a form field (e.g. empty year) */
 input.invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 2px rgba(239,68,68,.2); }
+
+/* ── Full-bleed pages ────────────────────────────────────
+   The monthly and weekly pages fill the whole area next to the sidebar (no card with rounded
+   corners and shadow inside the window). The PDF export builds its own HTML: not affected. */
+.cal-page, .week-page,
+html.dark .cal-page, html.dark .week-page {
+  border-radius: 0;
+  box-shadow: none;
+}

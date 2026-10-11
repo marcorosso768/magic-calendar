@@ -7,6 +7,8 @@ A stability release: safer saving, several bug fixes and automatic updates.
 - Weekly routine shared by all your calendars
 - Interface fully available in English and Italian
 - PDF export works offline, with correct margins and all images
+- Cleaner window: solid sidebar that is easier to read, calendar filling the whole window
+- App icon that follows light and dark mode
 
 ### 🐞 Fixes
 - The month arrows now open that month's calendar (or offer to create it) instead of editing another month

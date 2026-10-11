@@ -58,6 +58,8 @@ function applyDarkModeClass(mode) {
   } else { // auto
     html.classList.toggle('dark', _darkMq.matches);
   }
+  // Dock icon follows the effective app theme (not only the macOS setting).
+  window.api?.setDockDark?.(html.classList.contains('dark'));
 }
 
 // Listener sistema per modalità auto

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net } = require('electron');
 app.setName('Magic Calendar');
 const path = require('path');
 const fs   = require('fs');
@@ -15,9 +15,45 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow;
 
-// App icon: fixed, from the bundle. On macOS 26+ the bundle has an Icon Composer icon with a light and
-// a dark appearance (build-scripts/afterPack.js), switched by the system also while the app is closed.
-// The app no longer changes the Dock icon at runtime: that only worked while it was open.
+// ──────────────────────────────────────────────────────────────
+// App icon, light/dark
+//   App closed: the bundle icon. On macOS 26+ an Icon Composer icon with a light and a dark
+//     appearance and Liquid Glass turned off (build-scripts/afterPack.js); older macOS uses icon.icns.
+//   App open: the Dock icon follows the app's own theme (Settings: light/dark/auto), also with
+//     `npm start`. dock-*.png are complete icons on Apple's grid (824 px shape on a 1024 canvas,
+//     with shadow), so they match the size of the other Dock icons.
+//   Windows: the window/taskbar icon follows the theme too (icon-*.png).
+// ──────────────────────────────────────────────────────────────
+function iconResourcePath(name) {
+  const base = app.isPackaged
+    ? process.resourcesPath
+    : path.join(app.getAppPath(), 'build-resources');
+  return path.join(base, name);
+}
+
+function loadPng(name) {
+  // PNG, not .icns: nativeImage cannot read .icns.
+  const p = iconResourcePath(name);
+  if (!fs.existsSync(p)) { console.warn(`[icon] not found: ${p}`); return null; }
+  const image = nativeImage.createFromPath(p);
+  if (image.isEmpty()) { console.warn(`[icon] cannot read ${p}`); return null; }
+  return image;
+}
+
+function applyThemedIcon(isDark) {
+  const variant = isDark ? 'dark' : 'light';
+  try {
+    if (process.platform === 'darwin' && app.dock) {
+      const image = loadPng(`dock-${variant}.png`);
+      if (image) app.dock.setIcon(image);
+    } else if (process.platform === 'win32' && mainWindow && !mainWindow.isDestroyed()) {
+      const image = loadPng(`icon-${variant}.png`);
+      if (image) mainWindow.setIcon(image);
+    }
+  } catch (err) {
+    console.warn('[icon] update failed:', err);
+  }
+}
 
 function sendToRenderer(channel, ...args) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -107,13 +143,10 @@ function createWindow() {
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: isMac ? { x: 14, y: 16 } : undefined,
 
-    // macOS — Liquid Glass friendly: let AppKit paint the chrome.
-    // No `transparent: true` (which kills the system-drawn glass border).
+    // macOS — solid window, no vibrancy/Liquid Glass: the translucent sidebar made its text hard
+    // to read. The page paints its own opaque background; this colour only shows while loading.
     ...(isMac ? {
-      vibrancy: 'fullscreen-ui',       // resolves to Liquid Glass on macOS 26+,
-                                       // falls back gracefully on 14/15.
-      visualEffectState: 'followsWindowActiveState',
-      backgroundColor: '#00000000',    // RGBA-transparent fill; chrome is still drawn
+      backgroundColor: nativeTheme.shouldUseDarkColors ? '#120d1e' : '#fdf4ff',
       roundedCorners: true
     } : {}),
 
@@ -411,6 +444,7 @@ function checkPreviousMacUpdate() {
 // Theme — single source of truth is the renderer (it already
 // resolves the user's light/dark/auto preference against the OS).
 // ──────────────────────────────────────────────────────────────
+ipcMain.on('dock:set-dark', (_, isDark) => applyThemedIcon(!!isDark));
 // Menu labels follow the UI language: rebuilt when the language changes in Settings.
 ipcMain.on('menu:refresh', () => buildAppMenu());
 
@@ -429,6 +463,8 @@ app.whenReady().then(() => {
 
   createWindow();
   buildAppMenu();
+  // Initial icon from the system theme; the renderer corrects it once Settings are loaded.
+  applyThemedIcon(nativeTheme.shouldUseDarkColors);
 
   app.setAboutPanelOptions({
     applicationName: 'Magic Calendar',
