@@ -20,7 +20,6 @@
     },
     "files": [
       "src/**/*",
-      "assets/**/*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md}",
       "!**/node_modules/.bin",
       "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
