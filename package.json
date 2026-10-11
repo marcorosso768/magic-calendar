@@ -1,6 +1,6 @@
 {
   "name": "magic-calendar",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Calendario personalizzabile per tutte le famiglie con bambini",
   "main": "src/main.js",
   "scripts": {
@@ -15,10 +15,22 @@
     "copyright": "Copyright © 2026 Marco Rosso",
     "afterPack": "./build-scripts/afterPack.js",
     "extraResources": [
-      { "from": "build-resources/dock-light.png", "to": "." },
-      { "from": "build-resources/dock-dark.png", "to": "." },
-      { "from": "build-resources/icon-light.png", "to": "." },
-      { "from": "build-resources/icon-dark.png", "to": "." }
+      {
+        "from": "build-resources/dock-light.png",
+        "to": "."
+      },
+      {
+        "from": "build-resources/dock-dark.png",
+        "to": "."
+      },
+      {
+        "from": "build-resources/icon-light.png",
+        "to": "."
+      },
+      {
+        "from": "build-resources/icon-dark.png",
+        "to": "."
+      }
     ],
     "directories": {
       "output": "dist",
