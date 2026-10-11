@@ -18,6 +18,8 @@ Magic Calendar aiuta a organizzare attività, impegni e routine quotidiane con u
 | Mac con processore Intel | `Magic-Calendar-X.Y.Z-mac-x64.dmg` |
 | Windows (64 bit) | `Magic-Calendar-X.Y.Z-win-x64.exe` |
 
+Requisiti: macOS 13 Ventura o successivo, Windows 10 o successivo (64 bit).
+
 Non sai che Mac hai? Menu Apple  → *Informazioni su questo Mac*: "Chip Apple M…" vuol dire Apple Silicon,
 "Processore Intel…" vuol dire Intel. I file `.zip`, `.yml` e `.blockmap` della release servono agli
 aggiornamenti automatici: non vanno scaricati.

@@ -62,6 +62,15 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      # Electron 44 needs macOS 13 (Ventura) or later. electron-updater skips an update whose
+      # minimumSystemVersion is above the running system, comparing it with os.release(), which on macOS
+      # is the Darwin version: macOS 13 = Darwin 22. Without this, 1.1.x on macOS 12 would install an
+      # update that cannot start. (The app itself also declares LSMinimumSystemVersion 13.0.)
+      - name: Minimum macOS for in-app updates
+        run: |
+          echo "minimumSystemVersion: 22.0.0" >> dist/latest-mac.yml
+          cat dist/latest-mac.yml
+
       - name: Install dmgbuild
         run: pip3 install dmgbuild --break-system-packages
 

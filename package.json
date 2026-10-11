@@ -61,6 +61,7 @@
       ],
       "icon": "build-resources/icon.icns",
       "darkModeSupport": true,
+      "minimumSystemVersion": "13.0",
       "gatekeeperAssess": false,
       "hardenedRuntime": false,
       "identity": null,
@@ -94,10 +95,10 @@
     ]
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
-    "electron": "^28.3.3",
-    "electron-builder": "^24.13.3"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
   }
 }

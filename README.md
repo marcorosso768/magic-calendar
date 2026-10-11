@@ -22,6 +22,8 @@ Plan your week, organise activities, and keep everything in one place — with a
 | Mac with Intel processor | `Magic-Calendar-X.Y.Z-mac-x64.dmg` |
 | Windows (64-bit) | `Magic-Calendar-X.Y.Z-win-x64.exe` |
 
+Requirements: macOS 13 Ventura or later, Windows 10 or later (64-bit).
+
 Not sure which Mac you have? Apple menu  → *About This Mac*: "Chip Apple M…" means Apple Silicon,
 "Processor Intel…" means Intel. The `.zip`, `.yml` and `.blockmap` files in the release are used by the
 automatic updates: you do not need them.
