@@ -12,12 +12,15 @@ Magic Calendar aiuta a organizzare attività, impegni e routine quotidiane con u
 
 👉 **[Scarica l'ultima versione](../../releases/latest)**
 
-### Mac
-- Apple Silicon (M1 / M2 / M3) → scarica `arm64 .dmg`
-- Mac Intel → scarica `x64 .dmg`
+| Il tuo computer | File da scaricare |
+|---|---|
+| Mac con Apple Silicon (M1 e successivi) | `Magic-Calendar-X.Y.Z-mac-arm64.dmg` |
+| Mac con processore Intel | `Magic-Calendar-X.Y.Z-mac-x64.dmg` |
+| Windows (64 bit) | `Magic-Calendar-X.Y.Z-win-x64.exe` |
 
-### Windows
-- Scarica il file `.exe`
+Non sai che Mac hai? Menu Apple  → *Informazioni su questo Mac*: "Chip Apple M…" vuol dire Apple Silicon,
+"Processore Intel…" vuol dire Intel. I file `.zip`, `.yml` e `.blockmap` della release servono agli
+aggiornamenti automatici: non vanno scaricati.
 
 ---
 
@@ -27,8 +30,8 @@ L’app non è firmata, quindi macOS potrebbe bloccarla.
 
 Se vedi:
 
-- "Impossibile verificare lo sviluppatore"  
-  → tasto destro → Apri
+- "Impossibile verificare lo sviluppatore" o "Apple non è riuscita a verificare…"  
+  → apri *Impostazioni di Sistema → Privacy e sicurezza*, scorri in basso e premi **Apri comunque**
 
 - "App danneggiata"  
   → apri Terminale e lancia:
@@ -62,14 +65,14 @@ Puoi cambiarlo in qualsiasi momento nelle Impostazioni.
 ## 🛠 Installazione
 
 ### macOS
-1. Scarica il file `.dmg`
-2. Aprilo
-3. Trascina l’app in Applicazioni
-4. Apri Applicazioni
-5. Tasto destro → Apri
+1. Scarica il `.dmg` adatto al tuo Mac (`-mac-arm64` o `-mac-x64`, vedi sopra)
+2. Aprilo e trascina l’app in Applicazioni
+3. Espelli l’immagine disco e apri l’app da Applicazioni (non dall’immagine disco: da lì non può
+   aggiornarsi)
+4. Solo al primo avvio: *Impostazioni di Sistema → Privacy e sicurezza → Apri comunque*
 
 ### Windows
-1. Scarica il file `.exe`
+1. Scarica `-win-x64.exe`
 2. Esegui l’installer
 
 ---
@@ -96,8 +99,8 @@ npm run build:win
 
 | Sistema | Percorso |
 |--------|---------|
-| macOS | `~/Library/Application Support/magic-calendar/` |
-| Windows | `%APPDATA%\magic-calendar\` |
+| macOS | `~/Library/Application Support/Magic Calendar/` |
+| Windows | `%APPDATA%\Magic Calendar\` |
 
 I calendari sono in `calendari/`, le settimane e la routine in `weekly.json`, le impostazioni in
 `settings.json`, le immagini in `images/`. Ogni file viene scritto in modo atomico e la versione precedente
@@ -120,13 +123,30 @@ Se c'è, propone **Installa aggiornamento**:
 
 ## 🚀 Pubblicare una nuova versione
 
-1. Aggiorna `"version"` in `package.json` (es. `1.1.0`) e le note in `build-resources/release-notes.md`.
-2. Fai commit e push su `main`.
-3. Crea e pubblica il tag: `git tag v1.1.0 && git push origin v1.1.0`.
+1. Scrivi le note della nuova versione in `build-resources/release-notes.md`.
+2. Fai commit delle modifiche e aumenta la versione:
 
-GitHub Actions compila le versioni Mac e Windows, le carica in una release con i file per gli
-aggiornamenti (`latest-mac.yml`, `latest.yml`) e la pubblica. La compilazione si ferma se il tag e
-`package.json` non coincidono.
+```bash
+git add .
+git commit -m "…"
+npm version patch      # oppure minor / major
+git push --follow-tags
+```
+
+`npm version` aggiorna `package.json` e `package-lock.json`, fa il commit e crea il tag `vX.Y.Z`;
+`git push --follow-tags` invia `main` e il tag. Il tag avvia GitHub Actions, che compila le versioni Mac
+e Windows e pubblica una sola release con questi file:
+
+| File | Per |
+|---|---|
+| `Magic-Calendar-X.Y.Z-mac-arm64.dmg` | Mac Apple Silicon, download |
+| `Magic-Calendar-X.Y.Z-mac-x64.dmg` | Mac Intel, download |
+| `Magic-Calendar-X.Y.Z-win-x64.exe` | Windows, installazione e aggiornamento |
+| `Magic-Calendar-X.Y.Z-mac-arm64.zip`, `-mac-x64.zip` | Mac, aggiornamento dall'app |
+| `latest-mac.yml`, `latest.yml`, `*.blockmap` | dati per l'aggiornamento dall'app |
+
+La release viene pubblicata solo se entrambe le piattaforme compilano, e la compilazione si ferma se il
+tag e `package.json` non coincidono.
 
 ---
 

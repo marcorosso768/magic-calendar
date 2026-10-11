@@ -1,27 +1,19 @@
-## 🦄 Magic Calendar v1.1.0
+## 🦄 Magic Calendar v1.1.1
 
-A stability release: safer saving, several bug fixes and automatic updates.
+A small release: clearer download files, and the first update that arrives on its own.
 
 ### ✨ What's new
-- Automatic updates on macOS and Windows: the app tells you when a new version is available and installs it for you
-- Weekly routine shared by all your calendars
-- Interface fully available in English and Italian
-- PDF export works offline, with correct margins and all images
-- Cleaner window: solid sidebar that is easier to read, calendar filling the whole window
-- App icon that follows light and dark mode
+- Every download now says which computer it is for: `-mac-arm64` (Apple Silicon, M1 and later), `-mac-x64` (Intel Mac), `-win-x64` (Windows)
+- If you have version 1.1.0, this update installs itself: no need to download it by hand
 
-### 🐞 Fixes
-- The month arrows now open that month's calendar (or offer to create it) instead of editing another month
-- Creating a calendar can no longer overwrite an existing one
-- Day and time-slot icons are kept when you only change the note
-- A damaged file no longer stops the app from starting: the previous copy is restored
-- Deleting an image that is in use asks first and removes it from the days that used it
-- Closing Settings without saving now discards the changes
+### 📖 Documentation
+- Clearer instructions for the first launch on recent macOS (Privacy & Security → Open Anyway)
+- Correct location of your data folder
 
 ### 🖥️ Platforms
-- macOS (Apple Silicon and Intel)
-- Windows
+- macOS Apple Silicon → `Magic-Calendar-1.1.1-mac-arm64.dmg`
+- macOS Intel → `Magic-Calendar-1.1.1-mac-x64.dmg`
+- Windows → `Magic-Calendar-1.1.1-win-x64.exe`
 
 ### 📦 Notes
 If you have version 1.0.0, download and install this version once by hand: from 1.1.0 on, updates are automatic.
-Calendars created with 1.0.0 are converted automatically the first time you open them.

@@ -20,7 +20,9 @@ const OWNER = 'marcorosso768';
 const REPO  = 'magic-calendar';
 
 // files: UpdateInfo.files from electron-updater ([{ url, sha512, size }]).
-// electron-builder names the zips "<Name>-<version>-arm64-mac.zip" and "<Name>-<version>-mac.zip" (x64).
+// The zips are named "<Name>-<version>-mac-arm64.zip" and "<Name>-<version>-mac-x64.zip" (1.1.1+);
+// 1.1.0 used "-arm64-mac.zip" / "-x64-mac.zip". Matching only on ".zip" and "arm64" works for both,
+// so versions already installed keep finding their update.
 function pickMacZip(files, arch) {
   const zips = (files || []).filter(f => /\.zip$/i.test(f.url || ''));
   if (!zips.length) return null;

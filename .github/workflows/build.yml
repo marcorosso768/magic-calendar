@@ -1,13 +1,14 @@
 name: Build & Release
 
 # Every push to main builds the app (to catch build errors). A tag vX.Y.Z also publishes a release.
-# Release: set "version" in package.json to X.Y.Z, update build-resources/release-notes.md, commit,
-# then push the tag vX.Y.Z (see README).
+# Release: update build-resources/release-notes.md and commit, then
+#   npm version patch|minor|major   (sets package.json/package-lock.json, commits, tags vX.Y.Z)
+#   git push --follow-tags          (pushes main and the tag; the tag starts the release)
 #
-# Release assets:
-#   macOS   Magic-Calendar-X.Y.Z-arm64.dmg / -x64.dmg   (dmgbuild: HFS+ with background and layout)
-#           Magic-Calendar-X.Y.Z-arm64-mac.zip / -x64-mac.zip + latest-mac.yml   (used by in-app updates)
-#   Windows Magic-Calendar-Setup-X.Y.Z.exe + latest.yml (+ .blockmap)            (used by in-app updates)
+# Release assets (the architecture is always in the name):
+#   macOS   Magic-Calendar-X.Y.Z-mac-arm64.dmg / -mac-x64.dmg   (dmgbuild: HFS+ with background and layout)
+#           Magic-Calendar-X.Y.Z-mac-arm64.zip / -mac-x64.zip + latest-mac.yml   (used by in-app updates)
+#   Windows Magic-Calendar-X.Y.Z-win-x64.exe + latest.yml (+ .blockmap)          (used by in-app updates)
 on:
   push:
     branches:
@@ -68,9 +69,9 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           dmgbuild -s build-resources/dmgbuild-settings.py -D "app=dist/mac/Magic Calendar.app" \
-            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-x64.dmg"
+            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-mac-x64.dmg"
           dmgbuild -s build-resources/dmgbuild-settings.py -D "app=dist/mac-arm64/Magic Calendar.app" \
-            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-arm64.dmg"
+            "Magic Calendar" "dist/Magic-Calendar-${VERSION}-mac-arm64.dmg"
 
       - name: Upload Mac artifacts
         uses: actions/upload-artifact@v4

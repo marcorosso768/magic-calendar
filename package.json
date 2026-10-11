@@ -52,7 +52,7 @@
       "gatekeeperAssess": false,
       "hardenedRuntime": false,
       "identity": null,
-      "artifactName": "Magic-Calendar-${version}-${arch}-mac.${ext}"
+      "artifactName": "Magic-Calendar-${version}-mac-${arch}.${ext}"
     },
     "win": {
       "target": [
@@ -64,7 +64,7 @@
         }
       ],
       "icon": "build-resources/icon.ico",
-      "artifactName": "Magic-Calendar-Setup-${version}.${ext}"
+      "artifactName": "Magic-Calendar-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": true,

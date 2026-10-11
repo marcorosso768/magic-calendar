@@ -16,12 +16,15 @@ Plan your week, organise activities, and keep everything in one place — with a
 
 👉 **[Download the latest version](../../releases/latest)**
 
-### Mac
-- Apple Silicon (M1 / M2 / M3) → arm64 `.dmg`
-- Intel Mac → x64 `.dmg`
+| Your computer | File to download |
+|---|---|
+| Mac with Apple Silicon (M1 and later) | `Magic-Calendar-X.Y.Z-mac-arm64.dmg` |
+| Mac with Intel processor | `Magic-Calendar-X.Y.Z-mac-x64.dmg` |
+| Windows (64-bit) | `Magic-Calendar-X.Y.Z-win-x64.exe` |
 
-### Windows
-- `.exe` installer
+Not sure which Mac you have? Apple menu  → *About This Mac*: "Chip Apple M…" means Apple Silicon,
+"Processor Intel…" means Intel. The `.zip`, `.yml` and `.blockmap` files in the release are used by the
+automatic updates: you do not need them.
 
 ---
 
@@ -31,8 +34,8 @@ This app is unsigned, so macOS may block it.
 
 If you see:
 
-- "cannot verify developer"  
-  → right-click → Open
+- "cannot verify developer" or "Apple could not verify…"  
+  → open *System Settings → Privacy & Security*, scroll down and click **Open Anyway**
 
 - "app is damaged"  
   → run in Terminal:
@@ -79,15 +82,15 @@ docs/screenshots/
 ## 🛠 Installation
 
 ### macOS
-1. Download the `.dmg`
-2. Open it
-3. Drag the app into Applications
-4. Open Applications
-5. Right-click → Open
+1. Download the `.dmg` for your Mac (`-mac-arm64` or `-mac-x64`, see above)
+2. Open it and drag the app into Applications
+3. Eject the disk image and open the app from Applications (not from the disk image: from there it
+   cannot update itself)
+4. First launch only: *System Settings → Privacy & Security → Open Anyway*
 
 ### Windows
-1. Download the `.exe`
-2. Run installer
+1. Download `-win-x64.exe`
+2. Run the installer
 
 ---
 
@@ -113,8 +116,8 @@ npm run build:win
 
 | OS | Path |
 |----|------|
-| macOS | `~/Library/Application Support/magic-calendar/` |
-| Windows | `%APPDATA%\magic-calendar\` |
+| macOS | `~/Library/Application Support/Magic Calendar/` |
+| Windows | `%APPDATA%\Magic Calendar\` |
 
 Calendars are in `calendari/`, the weekly plans and routine in `weekly.json`, settings in `settings.json`,
 images in `images/`. Every file is written atomically and the previous version is kept as `.bak`.
@@ -136,12 +139,30 @@ When one is available it offers **Install update**:
 
 ## 🚀 Releasing a new version
 
-1. Set `"version"` in `package.json` (e.g. `1.1.0`) and update `build-resources/release-notes.md`.
-2. Commit and push to `main`.
-3. Create and push the tag: `git tag v1.1.0 && git push origin v1.1.0`.
+1. Write the notes for the new version in `build-resources/release-notes.md`.
+2. Commit the changes and bump the version:
 
-GitHub Actions builds the Mac and Windows versions, uploads them to a release with the update files
-(`latest-mac.yml`, `latest.yml`) and publishes it. The build fails if the tag and `package.json` disagree.
+```bash
+git add .
+git commit -m "…"
+npm version patch      # or minor / major
+git push --follow-tags
+```
+
+`npm version` updates `package.json` and `package-lock.json`, commits and creates the tag `vX.Y.Z`;
+`git push --follow-tags` pushes `main` and the tag. The tag starts GitHub Actions, which builds the Mac
+and Windows versions and publishes one release with these files:
+
+| File | For |
+|---|---|
+| `Magic-Calendar-X.Y.Z-mac-arm64.dmg` | Mac Apple Silicon, download |
+| `Magic-Calendar-X.Y.Z-mac-x64.dmg` | Mac Intel, download |
+| `Magic-Calendar-X.Y.Z-win-x64.exe` | Windows, installer and update |
+| `Magic-Calendar-X.Y.Z-mac-arm64.zip`, `-mac-x64.zip` | Mac, in-app update |
+| `latest-mac.yml`, `latest.yml`, `*.blockmap` | in-app update metadata |
+
+The release is published only if both platforms build, and the build fails if the tag and
+`package.json` disagree.
 
 ---
 
