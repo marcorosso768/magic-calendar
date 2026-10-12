@@ -461,6 +461,34 @@ function checkPreviousMacUpdate() {
   }
 }
 
+// macOS keeps app icons in a cache (Finder, Dock, Launchpad). When an update or a reinstall brings a
+// different icon, the cache can keep showing the old one until the user logs out. On the first launch
+// of a new version: if the bundle icon (Assets.car, or icon.icns) differs from the one seen last time,
+// touch the bundle, re-register it with Launch Services and restart the Dock, which reloads the icons.
+// The Dock restart happens only when the icon really changed (it makes the Dock flash once).
+function refreshMacIconCacheIfChanged() {
+  if (process.platform !== 'darwin' || !app.isPackaged) return;
+  const bundle = macUpdater.currentBundlePath(process.execPath);
+  if (!bundle) return;
+  const res = path.join(bundle, 'Contents', 'Resources');
+  const iconFile = ['Assets.car', 'icon.icns'].map(f => path.join(res, f)).find(f => fs.existsSync(f));
+  if (!iconFile) return;
+  const stateF = path.join(userData, 'icon-state.json');
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(stateF, 'utf8')) || {}; } catch (_) {}
+  let hash;
+  try { hash = require('crypto').createHash('sha1').update(fs.readFileSync(iconFile)).digest('hex'); } catch (_) { return; }
+  if (state.iconHash === hash) return;
+  const { execFile } = require('child_process');
+  const lsregister = '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister';
+  execFile('/usr/bin/touch', [bundle], () => {
+    execFile(lsregister, ['-f', bundle], () => {
+      setTimeout(() => execFile('/usr/bin/killall', ['Dock'], () => {}), 1500);
+    });
+  });
+  try { fs.writeFileSync(stateF, JSON.stringify({ iconHash: hash, version: app.getVersion() })); } catch (_) {}
+}
+
 // ──────────────────────────────────────────────────────────────
 // Theme — single source of truth is the renderer (it already
 // resolves the user's light/dark/auto preference against the OS).
@@ -495,6 +523,7 @@ app.whenReady().then(() => {
   });
 
   checkPreviousMacUpdate();
+  refreshMacIconCacheIfChanged();
   // Automatic update check shortly after launch.
   setTimeout(() => checkForUpdatesInteractive(false), 4000);
 });
