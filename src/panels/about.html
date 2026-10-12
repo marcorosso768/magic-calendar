@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'">
+<link rel="stylesheet" href="panel.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { display: flex; }
+  .left {
+    width: 290px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 20px 28px; text-align: center;
+  }
+  #icon { width: 168px; height: 168px; margin-bottom: 10px; }
+  #name { font-size: 30px; font-weight: 900; letter-spacing: .2px; }
+  #version { margin-top: 26px; font-size: 13.5px; color: var(--muted); font-weight: 700; }
+  #copyright { margin-top: 4px; font-size: 13.5px; color: var(--muted); font-weight: 700; }
+  .right { flex: 1; padding: 44px 22px 22px 0; display: flex; }
+  .scroll { flex: 1; overflow-y: auto; padding-right: 8px; }
+  .banner {
+    border-radius: 14px 14px 0 0; padding: 26px 24px; display: flex; align-items: center; gap: 22px;
+    background: linear-gradient(135deg, #7e22ce, #c026d3); color: #fff;
+  }
+  .banner h1 { font-size: 19px; font-weight: 900; line-height: 1.2; flex: 1; min-width: 0; }
+  .banner .links { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
+  .banner a { color: #fbe7ff; }
+  .section { margin-top: 0; }
+  .section + .section { margin-top: 14px; }
+  .section h2 {
+    background: var(--card); font-size: 14.5px; font-weight: 900; padding: 16px 20px;
+    border-radius: 0 0 14px 14px;
+  }
+  .section.alone h2 { border-radius: 14px; }
+  .section .body { padding: 14px 20px 4px 32px; font-size: 14px; line-height: 1.55; color: var(--muted); font-weight: 600; }
+  .section .body b { color: var(--text); font-weight: 800; display: block; margin-top: 8px; }
+  .section .body b:first-child { margin-top: 0; }
+  .section .body p { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <div class="left drag">
+    <img id="icon" alt="">
+    <div id="name"></div>
+    <div id="version"></div>
+    <div id="copyright"></div>
+  </div>
+  <div class="right drag">
+    <div class="scroll" id="content"></div>
+  </div>
+<script src="about.js"></script>
+</body>
+</html>

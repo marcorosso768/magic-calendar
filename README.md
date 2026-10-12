@@ -61,6 +61,7 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Today highlighted, past days dimmed, Italian public holidays
 - Day counts and countdown to the next day of each type
 - Backup and restore of all data in one file
+- Select several days at once, weekly patterns (also alternate weeks), Undo/Redo
 
 ---
 

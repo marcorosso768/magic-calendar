@@ -54,3 +54,29 @@ test('copy by weekday keeps weekly and alternate-week patterns', () => {
   // Tuesdays had nothing
   assert.equal(out[3], undefined);
 });
+
+test('set day type keeps image, note and icon', () => {
+  assert.deepEqual(U.setDayType({ type: 'away', image: 'x', note: 'n', icon: '' }, 'together', 'T'),
+    { type: 'together', icon: '', image: 'x', note: 'n', label: 'T' });
+  assert.equal(U.setDayType({ type: 'away', label: 'A' }, 'neutral', ''), null);
+  assert.equal(U.setDayType(undefined, 'neutral', ''), null);
+  assert.deepEqual(U.setDayType({ type: 'away', icon: '⚽' }, 'neutral', 'Sport'),
+    { type: 'neutral', icon: '⚽', image: '', note: '', label: 'Sport' });
+});
+
+test('weekly pattern, with alternate weeks across months', () => {
+  const A = ['away', 'away', 'away', null, 'together', 'together', 'together'];
+  const B = ['together', 'together', 'together', null, 'away', 'away', 'away'];
+  // 26 Oct 2026 is a Monday: week A starts there; 2 Nov is week B.
+  const out = U.patternDays({ from: { year: 2026, month: 9, day: 26 }, to: { year: 2026, month: 10, day: 8 }, weekA: A, weekB: B, anchor: { year: 2026, month: 9, day: 28 } });
+  const get = (m, d) => (out.find(x => x.month === m && x.day === d) || {}).type;
+  assert.equal(get(9, 26), 'away');      // Mon, week A
+  assert.equal(get(9, 29), undefined);   // Thu: left as it is
+  assert.equal(get(9, 31), 'together');  // Sat, week A
+  assert.equal(get(10, 2), 'together');  // Mon, week B
+  assert.equal(get(10, 7), 'away');      // Sat, week B
+  assert.equal(out.length, 12);          // 14 days minus 2 Thursdays
+  // simple weekly pattern, one month
+  const w = U.patternDays({ from: { year: 2026, month: 10, day: 1 }, to: { year: 2026, month: 10, day: 30 }, weekA: [null, null, null, null, null, 'together', 'together'] });
+  assert.equal(w.length, 9);             // 4 Saturdays + 5 Sundays in November 2026
+});

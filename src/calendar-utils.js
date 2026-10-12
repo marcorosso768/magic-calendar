@@ -109,7 +109,44 @@ const CalUtils = (() => {
     return out;
   }
 
-  return { easterSunday, italianHolidays, holidayFor, stamp, todayStamp, relToToday, countTypes, daysBetween, nextOccurrences, copyByWeekday };
+  // A day with a new type. Image, note and activity icon stay; a plain day with nothing left is
+  // removed (null). label: the label of the type (for "neutral": the label of the icon, if any).
+  function setDayType(before, type, label) {
+    const b = before || {};
+    const after = { type, icon: b.icon || '', image: b.image || '', note: b.note || '', label: label || '' };
+    if (type === 'neutral' && !after.icon && !after.image && !after.note) return null;
+    return after;
+  }
+
+  // Days covered by a weekly pattern. weekA / weekB: 7 entries, Monday first, each a type key or
+  // null ("leave the day as it is"). With weekB, weeks alternate A, B, A… starting from the week of
+  // `anchor` (any date: its Monday is used). Returns [{ year, month, day, type }] from `from` to `to`
+  // (both included, at most 400 days).
+  function patternDays({ from, to, weekA, weekB = null, anchor = null }) {
+    const start = new Date(from.year, from.month, from.day);
+    const end = new Date(to.year, to.month, to.day);
+    const mondayIndex = (dt) => (dt.getDay() + 6) % 7;            // Monday 0 … Sunday 6
+    let anchorMonday = null;
+    if (weekB) {
+      const a = anchor ? new Date(anchor.year, anchor.month, anchor.day) : start;
+      anchorMonday = new Date(a.getFullYear(), a.getMonth(), a.getDate() - mondayIndex(a));
+    }
+    const out = [];
+    for (let i = 0; i <= 400; i++) {
+      const dt = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (dt > end) break;
+      let week = weekA;
+      if (weekB) {
+        const w = Math.floor(daysBetween(anchorMonday, dt) / 7);
+        week = ((w % 2) + 2) % 2 === 0 ? weekA : weekB;
+      }
+      const type = week[mondayIndex(dt)];
+      if (type) out.push({ year: dt.getFullYear(), month: dt.getMonth(), day: dt.getDate(), type });
+    }
+    return out;
+  }
+
+  return { easterSunday, italianHolidays, holidayFor, stamp, todayStamp, relToToday, countTypes, daysBetween, nextOccurrences, copyByWeekday, setDayType, patternDays };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = CalUtils;

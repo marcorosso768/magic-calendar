@@ -27,6 +27,7 @@
   <div class="sidebar-label">I tuoi calendari</div>
   <div id="saved-list" class="saved-list"></div>
   <button id="btn-new" class="btn-outline full">＋ Nuovo calendario</button>
+  <button id="btn-pattern" class="btn-ghost full" data-i18n="patternBtn">🔁 Schema ripetuto…</button>
   <div class="spacer"></div>
   <button id="btn-settings" class="btn-ghost">⚙️ Impostazioni</button>
   <button id="btn-export" class="btn-accent full">⬇ Esporta PDF</button>
@@ -159,6 +160,21 @@
 </div>
 
 
+<!-- Weekly pattern -->
+<div id="modal-pattern" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h2 data-i18n="patternTitle">🔁 Schema ripetuto</h2>
+      <button class="close-btn" data-close="modal-pattern">✕</button>
+    </div>
+    <div class="modal-body" id="pattern-body"></div>
+    <div class="modal-foot">
+      <button id="btn-pattern-apply" class="btn-accent" data-i18n="patternApply">Applica</button>
+      <button class="btn-outline" data-close="modal-pattern" data-i18n="cancel">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <!-- Theme welcome -->
 <div id="modal-theme-welcome" class="modal hidden">
   <div class="modal-box narrow">
@@ -202,21 +218,19 @@
   </div>
 </div>
 
-<!-- Update banner (hidden by default, managed by app.js) -->
-<div id="update-banner" class="update-banner hidden" role="status" aria-live="polite">
-  <span id="update-banner-icon">⬇️</span>
-  <span id="update-banner-text">Downloading update…</span>
-  <div id="update-banner-progress"><div id="update-banner-bar"></div></div>
-</div>
 
 <!-- Scripts in correct order: i18n already loaded in <head> -->
 <script src="storage.js"></script>
 <script src="calendar-utils.js"></script>
+<script src="day-ops.js"></script>
+<script src="whats-new.js"></script>
 <script src="settings.js"></script>
 <script src="emoji-picker.js"></script>
 <script src="image-picker.js"></script>
 <script src="views/calendar.js"></script>
 <script src="views/weekly.js"></script>
+<script src="views/pattern.js"></script>
+<script src="views/tour.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

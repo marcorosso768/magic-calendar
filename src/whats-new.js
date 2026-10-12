@@ -1,0 +1,80 @@
+// whats-new.js — the steps of the "What's new" tour, per version.
+//
+// For a new release, add an entry with its version. Each step: target (CSS selector of the element
+// to highlight; null = bubble in the middle of the window), title and text in it/en. {mod} is
+// replaced with ⌘ on macOS and Ctrl on Windows.
+
+const WHATS_NEW = [
+  {
+    version: '1.4.0',
+    steps: [
+      {
+        target: '#view-monthly .days-grid',
+        title: { it: 'Seleziona più giorni', en: 'Select several days' },
+        text: {
+          it: 'Trascina il mouse da un giorno all’altro, oppure clicca un giorno e poi Maiusc+clic su un altro. Un clic semplice apre ancora il giorno.',
+          en: 'Drag from one day to another, or click a day and then Shift+click another. A single click still opens the day.',
+        },
+      },
+      {
+        target: null,
+        title: { it: 'Un tipo per tutti', en: 'One type for all' },
+        text: {
+          it: 'Con dei giorni selezionati compare una barra in basso: scegli il tipo e viene applicato a tutti. Immagini e note restano. Esc annulla la selezione.',
+          en: 'With some days selected, a bar appears at the bottom: pick a type and it is applied to all of them. Images and notes stay. Esc clears the selection.',
+        },
+      },
+      {
+        target: '#btn-pattern',
+        title: { it: 'Schema ripetuto', en: 'Weekly pattern' },
+        text: {
+          it: 'Un tipo per ogni giorno della settimana, anche a settimane alterne, su questo mese o su un periodo. Prima di applicarlo vedi quanti giorni cambiano.',
+          en: 'A type for each day of the week, also with alternate weeks, on this month or over a period. Before applying it you see how many days change.',
+        },
+      },
+      {
+        target: null,
+        title: { it: 'Annulla e Ripristina', en: 'Undo and Redo' },
+        text: {
+          it: '{mod}Z annulla qualsiasi modifica ai giorni (anche uno schema intero), {mod}⇧Z la ripristina. Le trovi anche nel menu Modifica.',
+          en: '{mod}Z undoes any change to the days (even a whole pattern), {mod}⇧Z redoes it. Both are also in the Edit menu.',
+        },
+      },
+      {
+        target: null,
+        title: { it: 'Nuove finestre', en: 'New windows' },
+        text: {
+          it: 'Gli aggiornamenti hanno una finestra tutta loro, con le novità e il download. E c’è una nuova finestra Informazioni su Magic Calendar.',
+          en: 'Updates have a window of their own, with what’s new and the download. And there is a new About Magic Calendar window.',
+        },
+      },
+    ],
+  },
+];
+
+// "1.10.0" > "1.9.2"
+function versionNewer(a, b) {
+  const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  }
+  return false;
+}
+
+// Steps of the versions after `lastSeen` and up to `current` (oldest first).
+function whatsNewSince(lastSeen, current) {
+  return WHATS_NEW
+    .filter(e => (!lastSeen || versionNewer(e.version, lastSeen)) && !versionNewer(e.version, current))
+    .sort((a, b) => (versionNewer(a.version, b.version) ? 1 : -1))
+    .flatMap(e => e.steps);
+}
+
+// Steps of the newest version that has some, up to `current` (Help → What's New).
+function whatsNewLatest(current) {
+  const list = WHATS_NEW.filter(e => !versionNewer(e.version, current));
+  list.sort((a, b) => (versionNewer(a.version, b.version) ? -1 : 1));
+  return list.length ? list[0].steps : [];
+}
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { WHATS_NEW, versionNewer, whatsNewSince, whatsNewLatest };

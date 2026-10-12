@@ -12,6 +12,7 @@ const App = (() => {
 
   async function init() {
     await SettingsManager.load();
+    const firstLaunch = !SettingsManager.get().themeSelectionCompleted;
 
     const appInfo = await window.api.appInfo();
     document.documentElement.dataset.platform = appInfo.platform;
@@ -169,37 +170,16 @@ const App = (() => {
       // If the user cancelled the dialog, keep the export modal open silently.
     });
 
-    // Auto-update UI — show a small non-blocking banner while the update
-    // is downloading; native dialogs in main.js handle confirmation.
-    if (window.api) {
-      const banner = document.getElementById('update-banner');
-      const barEl  = document.getElementById('update-banner-bar');
-      const txtEl  = document.getElementById('update-banner-text');
-      const showBanner = (text) => {
-        if (!banner) return;
-        banner.classList.remove('hidden');
-        if (txtEl) txtEl.textContent = text;
-      };
-      const hideBanner = () => { if (banner) banner.classList.add('hidden'); };
+    // Undo / Redo of day changes (Edit menu, ⌘Z / ⇧⌘Z). In a text field the field keeps its own undo.
+    const inTextField = () => {
+      const el = document.activeElement;
+      return el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['checkbox','radio','button','date','number'].includes(el.type)) || el.isContentEditable);
+    };
+    window.api.onMenuUndo?.(() => { if (inTextField()) document.execCommand('undo'); else { CalView.clearSelection(); DayOps.undo(); } });
+    window.api.onMenuRedo?.(() => { if (inTextField()) document.execCommand('redo'); else DayOps.redo(); });
 
-      window.api.onUpdateDownloading?.(() => {
-        if (barEl) barEl.style.width = '0%';
-        showBanner(I18n.t('updateDownloading') || 'Downloading update…');
-      });
-      window.api.onUpdateProgress?.((p) => {
-        if (barEl) barEl.style.width = `${Math.max(0, Math.min(100, p.percent || 0))}%`;
-        showBanner(`${I18n.t('updateDownloading') || 'Downloading update…'} ${Math.round(p.percent || 0)}%`);
-      });
-      window.api.onUpdateDownloaded?.((info) => {
-        if (barEl) barEl.style.width = '100%';
-        showBanner(
-          (I18n.t('updateReady') || 'Update ready') + (info?.version ? ` (v${info.version})` : '')
-        );
-        // Auto-hide after 5 s — a native dialog is shown by main.js too.
-        setTimeout(hideBanner, 5000);
-      });
-      window.api.onUpdateFailed?.(hideBanner);
-    }
+    // Weekly pattern
+    document.getElementById('btn-pattern')?.addEventListener('click', () => PatternView.open(year, month));
 
     // Close modals
     document.querySelectorAll('[data-close]').forEach(btn => {
@@ -216,6 +196,7 @@ const App = (() => {
     // Init sub-modules
     CalView.initListeners();
     WeekView.initListeners();
+    PatternView.initListeners();
     initSettingsListeners();
 
     // Load saved calendars
@@ -236,6 +217,20 @@ const App = (() => {
     if (!SettingsManager.get().themeSelectionCompleted) {
       await openThemeWelcome();
     }
+
+    // "What's new" tour: once per version, after an update. A new install gets none (it starts
+    // with the theme choice). Help → What's New opens it again.
+    const seen = SettingsManager.get().lastWhatsNew;
+    const steps = firstLaunch ? [] : whatsNewSince(seen, appInfo.version);
+    if (seen !== appInfo.version) {
+      SettingsManager.set({ lastWhatsNew: appInfo.version });
+      await SettingsManager.save();
+    }
+    if (steps.length) setTimeout(() => Tour.start(steps), 700);
+    window.api.onMenuWhatsNew?.(() => {
+      const list = whatsNewLatest(appInfo.version);
+      Tour.start(list.length ? list : (WHATS_NEW[WHATS_NEW.length - 1]?.steps || []));
+    });
   }
 
   async function renderCurrent(nav = _nav) {
@@ -301,6 +296,19 @@ const App = (() => {
     return key;
   }
 
+  // Calendar for changes made to a month that may not be on screen (weekly patterns):
+  // the one on screen for that month, else the only one of that month, else a new one.
+  // With several calendars in that month (none on screen) it is not clear which one: null.
+  async function calendarFor(y, m, { create = true } = {}) {
+    if (calKey && year === y && month === m) return calKey;
+    const cands = _calIndex.filter(c => c.year === y && c.month === m);
+    if (cands.length === 1) return cands[0].key;
+    if (cands.length > 1) return null;
+    if (!create) return undefined;            // no calendar yet
+    if (year === y && month === m) return ensureCalendar(y, m);
+    return createCalendar(y, m, '', {}, { select: false });
+  }
+
   // Calendar of a month that has none yet: created when its first day is saved.
   async function ensureCalendar(y, m) {
     if (calKey && year === y && month === m) return calKey;
@@ -333,8 +341,8 @@ const App = (() => {
   }
 
   let _creating = false;   // ignores double clicks while a calendar is being created
-  async function createCalendar(y, m, name, days = {}) {
-    if (_creating) return;
+  async function createCalendar(y, m, name, days = {}, { select = true } = {}) {
+    if (_creating) return null;
     _creating = true;
     try {
       const months = I18n.ta('months');
@@ -345,7 +353,9 @@ const App = (() => {
       // The main process refuses to overwrite an existing file: try the next free key.
       for (let n = 2; !(await Storage.create(key, data)).ok; n++) key = `${makeKey(finalName, y, m)}_x${n}`;
       await refreshSavedList();
-      await selectCal(key);
+      if (select) await selectCal(key);
+      else markActive();
+      return key;
     } finally {
       _creating = false;
     }
@@ -448,7 +458,7 @@ const App = (() => {
     if (ml) ml.textContent = `${months[month]||''} ${year}`;
   }
 
-  return { init, refresh, renderMonthly, ensureCalendar };
+  return { init, refresh, renderMonthly, ensureCalendar, calendarFor };
 })();
 
 // updateStaticStrings è definita in settings.js (versione completa con App.refresh())

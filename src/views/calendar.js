@@ -126,7 +126,14 @@ const CalView = (() => {
     for (let day = 1; day <= daysCount; day++) {
       const dd   = days[day] || { type:'neutral' };
       const cell = buildCell(day, dd, year, month);
-      cell.addEventListener('click', () => openEditor(day, dd, calKey, year, month));
+      cell.dataset.day = day;
+      cell.addEventListener('mousedown', e => _selMouseDown(e, day));
+      cell.addEventListener('mouseenter', () => _selMouseEnter(day));
+      cell.addEventListener('click', () => {
+        if (_suppressClick) { _suppressClick = false; return; }
+        clearSelection();
+        openEditor(day, dd, calKey, year, month);
+      });
       grid.appendChild(cell);
     }
     page.appendChild(grid);
@@ -138,6 +145,109 @@ const CalView = (() => {
     page.appendChild(foot);
 
     cont.appendChild(page);
+
+    // Same month redrawn (e.g. after Undo): keep the selection; another month: drop it.
+    if (_sel.month !== `${year}-${month}`) { _sel.days.clear(); _sel.anchor = null; _sel.month = `${year}-${month}`; }
+    _renderSelection();
+  }
+
+  // ── Multiple selection ────────────────────────────────────────────
+  // Drag across days, or click a day and Shift+click another: the days in between are selected and
+  // a bar offers the day types. A plain click still opens the day editor.
+  const _sel = { days: new Set(), anchor: null, month: null };
+  let _drag = null;            // { start } while the mouse button is down on a day
+  let _suppressClick = false;  // the click that ends a drag or a Shift+click must not open the editor
+
+  function _range(a, b) {
+    const out = [];
+    for (let d = Math.min(a, b); d <= Math.max(a, b); d++) out.push(d);
+    return out;
+  }
+
+  function _selMouseDown(e, day) {
+    if (e.button !== 0) return;
+    if (e.shiftKey) {
+      e.preventDefault();
+      const from = _sel.anchor ?? day;
+      _sel.days = new Set(_range(from, day));
+      _sel.anchor = from;
+      _suppressClick = true;
+      _renderSelection();
+      return;
+    }
+    _drag = { start: day, moved: false };
+  }
+
+  function _selMouseEnter(day) {
+    if (!_drag) return;
+    if (day !== _drag.start) _drag.moved = true;
+    if (!_drag.moved) return;
+    _sel.days = new Set(_range(_drag.start, day));
+    _sel.anchor = _drag.start;
+    _renderSelection();
+  }
+
+  document.addEventListener('mouseup', () => {
+    if (_drag && _drag.moved) _suppressClick = true;
+    else if (_drag) _sel.anchor = _drag.start;   // plain click: anchor for a following Shift+click
+    _drag = null;
+  });
+
+  function clearSelection() {
+    if (!_sel.days.size) return;
+    _sel.days.clear();
+    _renderSelection();
+  }
+
+  function _renderSelection() {
+    document.querySelectorAll('#view-monthly .day-cell[data-day]').forEach(c =>
+      c.classList.toggle('selected', _sel.days.has(Number(c.dataset.day))));
+    let bar = document.getElementById('sel-bar');
+    if (!_sel.days.size) { bar?.remove(); return; }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'sel-bar';
+      document.getElementById('main').appendChild(bar);
+    }
+    const types = SettingsManager.get().types || [];
+    bar.innerHTML = '';
+    const count = document.createElement('span');
+    count.className = 'sel-count';
+    count.textContent = I18n.tf('selectedDays', _sel.days.size);
+    bar.appendChild(count);
+    [{ key: 'neutral', label: I18n.t('typeNone'), emoji: '—' }, ...types].forEach(t => {
+      const b = document.createElement('button');
+      b.className = 'sel-type';
+      b.textContent = t.key === 'neutral' ? `— ${t.label}` : (t.label || t.key);
+      b.addEventListener('click', () => applyTypeToSelection(t.key));
+      bar.appendChild(b);
+    });
+    const x = document.createElement('button');
+    x.className = 'sel-close';
+    x.textContent = '✕';
+    x.title = I18n.t('cancel');
+    x.addEventListener('click', clearSelection);
+    bar.appendChild(x);
+  }
+
+  async function applyTypeToSelection(type) {
+    const days = [..._sel.days];
+    if (!days.length) return;
+    const year = _curYear, month = _curMonth;
+    clearSelection();
+    const calKey = _curCalKey || await App.ensureCalendar(year, month);
+    if (!calKey) return;
+    const data = await Storage.load(calKey) || { days: {} };
+    const types = SettingsManager.get().types || [];
+    const changes = days.map(day => {
+      const before = (data.days || {})[day] || null;
+      const icon = before && before.icon;
+      const label = type === 'neutral'
+        ? (icon ? (SettingsManager.allIcons().find(x => x.emoji === icon)?.label || '') : '')
+        : (types.find(t => t.key === type)?.label || '');
+      return { calKey, day, before, after: CalUtils.setDayType(before, type, label) };
+    });
+    await DayOps.apply(changes);
   }
 
   // ── Build day cell ────────────────────────────────────────────────
@@ -651,6 +761,10 @@ ${typesCss}
   }
 
   function initListeners() {
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && _sel.days.size && !document.querySelector('.modal:not(.hidden)')) clearSelection();
+    });
+
     document.getElementById('btn-day-save').addEventListener('click', async () => {
       if (!_editing) return;
       const { day, year, month } = _editing;
@@ -669,17 +783,15 @@ ${typesCss}
                   : icon      ? (SettingsManager.allIcons().find(x=>x.emoji===icon)?.label||'')
                   : '';
 
-      let saved = await Storage.load(calKey) || { year, month, days:{} };
-      saved.days = saved.days || {};
-      saved.days[day] = { type, icon, image, note, label };
-      await Storage.save(calKey, saved);
-
+      const saved = await Storage.load(calKey) || { days: {} };
+      const before = (saved.days || {})[day] || null;
+      const after = (type === 'neutral' && !icon && !image && !note) ? null : { type, icon, image, note, label };
       document.getElementById('modal-day').classList.add('hidden');
-      App.renderMonthly(year, month, calKey, saved);
+      await DayOps.apply([{ calKey, day, before, after }]);   // redraws, and can be undone
     });
   }
 
-  return { render, initListeners, buildPrintHTML };
+  return { render, initListeners, buildPrintHTML, clearSelection };
 })();
 
 // ── Shared helpers ───────────────────────────────────────────────

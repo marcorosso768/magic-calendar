@@ -39,10 +39,11 @@ contextBridge.exposeInMainWorld('api', {
   backupExport: () => ipcRenderer.invoke('backup:export'),
   backupImport: () => ipcRenderer.invoke('backup:import'),
 
-  // Auto-update
+  // Auto-update (the update window is drawn by the main process: see panels/)
   checkForUpdates: ()                 => ipcRenderer.invoke('update:check'),
-  onUpdateDownloading: (cb)           => ipcRenderer.on('update:downloading', () => cb()),
-  onUpdateProgress: (cb)              => ipcRenderer.on('update:progress', (_e, p) => cb(p)),
-  onUpdateDownloaded: (cb)            => ipcRenderer.on('update:downloaded', (_e, info) => cb(info)),
-  onUpdateFailed: (cb)                => ipcRenderer.on('update:failed', () => cb()),
+
+  // Edit menu: Undo / Redo of day changes (text fields keep their own undo)
+  onMenuUndo: (cb) => ipcRenderer.on('menu:undo', () => cb()),
+  onMenuRedo: (cb) => ipcRenderer.on('menu:redo', () => cb()),
+  onMenuWhatsNew: (cb) => ipcRenderer.on('menu:whats-new', () => cb()),
 });

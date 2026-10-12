@@ -72,7 +72,7 @@ function buildAppMenu() {
     ...(isMac ? [{
       label: appName,
       submenu: [
-        { role: 'about' },
+        { label: T('menuAbout'), click: () => openAboutWindow() },
         { type: 'separator' },
         {
           label: T('menuCheckUpdates'),
@@ -109,7 +109,18 @@ function buildAppMenu() {
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
     },
-    { role: 'editMenu' },
+    {
+      // Undo/Redo: in a text field the field's own undo, otherwise the calendar's (renderer decides).
+      label: T('menuEdit'),
+      submenu: [
+        { label: T('menuUndo'), accelerator: 'CommandOrControl+Z', click: () => sendToRenderer('menu:undo') },
+        { label: T('menuRedo'), accelerator: isMac ? 'Shift+Command+Z' : 'Control+Y', click: () => sendToRenderer('menu:redo') },
+        { type: 'separator' },
+        { role: 'cut' }, { role: 'copy' }, { role: 'paste' },
+        { type: 'separator' },
+        { role: 'selectAll' }
+      ]
+    },
     { role: 'viewMenu' },
     { role: 'windowMenu' },
     {
@@ -118,7 +129,14 @@ function buildAppMenu() {
         ...(!isMac ? [{
           label: T('menuCheckUpdates'),
           click: () => checkForUpdatesInteractive(true)
+        }, {
+          label: T('menuAbout'),
+          click: () => openAboutWindow()
         }] : []),
+        {
+          label: T('menuWhatsNew'),
+          click: () => sendToRenderer('menu:whats-new')
+        },
         {
           label: T('menuHomepage'),
           click: () => shell.openExternal('https://github.com/marcorosso768/magic-calendar')
@@ -210,6 +228,17 @@ const MAIN_STRINGS = {
     manualDetailDmg: 'L’app è aperta dall’immagine disco o da una cartella temporanea: spostala in Applicazioni per ricevere gli aggiornamenti automatici. Intanto puoi scaricare la nuova versione dalla pagina delle release.',
     openReleases: 'Apri la pagina delle release', close: 'Chiudi',
     savePdf: 'Salva PDF', chooseImage: 'Scegli un’immagine', images: 'Immagini',
+    menuWhatsNew: 'Novità di questa versione', menuEdit: 'Modifica', menuAbout: 'Informazioni su Magic Calendar', menuUndo: 'Annulla', menuRedo: 'Ripristina',
+    updChecking: 'Ricerca aggiornamenti…', updUpToDate: 'Sei aggiornato!',
+    updUpToDateMsg: (v) => `Magic Calendar ${v} è la versione più recente.`,
+    updAvailable: (v) => `È disponibile Magic Calendar ${v}`, updAvailableMsg: (v) => `Hai la versione ${v}. Vuoi installare l’aggiornamento?`,
+    updDownloading: (v) => `Scaricamento di Magic Calendar ${v}…`, updReadyMsg: 'Riavvia per completare l’aggiornamento. Se scegli Più tardi, verrà installato alla chiusura dell’app.',
+    updHistory: 'Storico versioni', updErrorMsg: 'Controlla la connessione e riprova più tardi.',
+    aboutVersion: (v) => `Versione ${v}`, aboutProject: 'Il progetto Magic Calendar', aboutSource: 'Codice su GitHub', aboutReleases: 'Tutte le versioni',
+    aboutAuthorRole: 'Programmazione, design e manutenzione', aboutBuilt: 'Costruito con', aboutCredits: 'Crediti',
+    aboutFont: 'Carattere', aboutFontText: 'Nunito, di Vernon Adams (SIL Open Font License)',
+    aboutLicense: 'Licenza', aboutLicenseText: 'Gratuita per uso personale ed educativo. Uso commerciale solo con permesso dell’autore.',
+    aboutData: 'I tuoi dati', aboutDataText: 'Tutto resta sul tuo computer: nessun account, nessun server.',
     menuExportBackup: 'Esporta backup…', menuImportBackup: 'Importa backup…',
     backupSaveTitle: 'Esporta backup', backupOpenTitle: 'Importa backup', backupFilter: 'Backup di Magic Calendar',
     backupSaved: 'Backup salvato', backupSavedMsg: (n) => `Il backup contiene ${n} calendari, la settimana, le impostazioni e le immagini.`,
@@ -236,6 +265,17 @@ const MAIN_STRINGS = {
     manualDetailDmg: 'The app is running from the disk image or a temporary folder: move it to Applications to get automatic updates. Meanwhile you can download the new version from the releases page.',
     openReleases: 'Open Releases Page', close: 'Close',
     savePdf: 'Save PDF', chooseImage: 'Choose an image', images: 'Images',
+    menuWhatsNew: 'What’s New in This Version', menuEdit: 'Edit', menuAbout: 'About Magic Calendar', menuUndo: 'Undo', menuRedo: 'Redo',
+    updChecking: 'Checking for updates…', updUpToDate: 'You’re up to date!',
+    updUpToDateMsg: (v) => `Magic Calendar ${v} is the newest version available.`,
+    updAvailable: (v) => `Magic Calendar ${v} is available`, updAvailableMsg: (v) => `You have version ${v}. Install the update?`,
+    updDownloading: (v) => `Downloading Magic Calendar ${v}…`, updReadyMsg: 'Restart to finish updating. If you choose Later, it will be installed when you quit the app.',
+    updHistory: 'Version History', updErrorMsg: 'Check your connection and try again later.',
+    aboutVersion: (v) => `Version ${v}`, aboutProject: 'The Magic Calendar project', aboutSource: 'Source on GitHub', aboutReleases: 'All versions',
+    aboutAuthorRole: 'Programmer, designer & maintainer', aboutBuilt: 'Built with', aboutCredits: 'Credits',
+    aboutFont: 'Typeface', aboutFontText: 'Nunito, by Vernon Adams (SIL Open Font License)',
+    aboutLicense: 'License', aboutLicenseText: 'Free for personal and educational use. Commercial use only with the author’s permission.',
+    aboutData: 'Your data', aboutDataText: 'Everything stays on your computer: no account, no server.',
     menuExportBackup: 'Export Backup…', menuImportBackup: 'Import Backup…',
     backupSaveTitle: 'Export backup', backupOpenTitle: 'Import backup', backupFilter: 'Magic Calendar backup',
     backupSaved: 'Backup saved', backupSavedMsg: (n) => `The backup contains ${n} calendars, the week plans, the settings and the images.`,
@@ -273,7 +313,6 @@ autoUpdater.allowPrerelease      = false;
 autoUpdater.fullChangelog        = false;
 autoUpdater.logger = { info: () => {}, warn: console.warn, error: console.error, debug: () => {} };
 
-let _updateBusy = false;          // a prompt or a download is in progress
 let _pendingMacInstaller = null;  // mac update downloaded and ready: runs when the app quits
 let _pendingMacVersion = null;
 let _pendingRelaunch = false;     // "Restart now" reopens the app after the swap, "Later" does not
@@ -282,68 +321,205 @@ function releasePageUrl() {
   return 'https://github.com/marcorosso768/magic-calendar/releases/latest';
 }
 
-async function offerManualDownload(detail) {
-  const { response } = await dialog.showMessageBox(mainWindow, {
-    type: 'warning',
-    title: T('manualTitle'),
-    message: T('manualMsg'),
-    detail,
-    buttons: [T('openReleases'), T('close')],
-    defaultId: 0,
-    cancelId: 1
+// ──────────────────────────────────────────────────────────────
+// Small windows: update (Bartender style) and About (Keka style), in src/panels/
+// ──────────────────────────────────────────────────────────────
+let updateWin = null;
+let aboutWin = null;
+let _isDark = nativeTheme.shouldUseDarkColors;   // effective app theme, sent by the renderer
+
+function panelIcon() {
+  try {
+    const img = loadPng(`dock-${_isDark ? 'dark' : 'light'}.png`);
+    return img ? img.toDataURL() : '';
+  } catch (_) { return ''; }
+}
+
+function createPanel(file, opts) {
+  const win = new BrowserWindow({
+    show: false, resizable: false, minimizable: false, maximizable: false, fullscreenable: false,
+    backgroundColor: _isDark ? '#1c1924' : '#f6f4fa',
+    webPreferences: { preload: path.join(__dirname, 'panels', 'panel-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+    ...opts,
   });
-  if (response === 0) shell.openExternal(releasePageUrl());
+  win.setMenuBarVisibility(false);
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
+  win.loadFile(path.join(__dirname, 'panels', file));
+  win.once('ready-to-show', () => { if (!win.isDestroyed()) win.show(); });
+  return win;
+}
+
+function openUpdateWindow() {
+  if (updateWin && !updateWin.isDestroyed()) { updateWin.show(); updateWin.focus(); return; }
+  updateWin = createPanel('update.html', {
+    width: 380, height: 300, frame: false, roundedCorners: true, skipTaskbar: true,
+    parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
+  });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const b = mainWindow.getBounds();
+    updateWin.setPosition(Math.round(b.x + (b.width - 380) / 2), Math.round(b.y + Math.min(160, b.height / 4)));
+  } else {
+    updateWin.center();
+  }
+  updateWin.on('closed', () => {
+    updateWin = null;
+    // Closing while checking cancels the check; closing an available update means "later".
+    if (_updState && ['checking', 'uptodate', 'error', 'manual', 'devonly', 'available'].includes(_updState.kind)) {
+      if (_updState.kind === 'checking') _checkToken++;
+      _updState = null;
+    }
+  });
+}
+
+function openAboutWindow() {
+  if (aboutWin && !aboutWin.isDestroyed()) { aboutWin.show(); aboutWin.focus(); return; }
+  aboutWin = createPanel('about.html', {
+    width: 720, height: 430, center: true,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    title: T('menuAbout'),
+  });
+  aboutWin.on('closed', () => { aboutWin = null; });
+}
+
+function aboutInfo() {
+  const v = process.versions;
+  return {
+    name: 'Magic Calendar',
+    version: T('aboutVersion', app.getVersion()),
+    copyright: `Copyright © 2026${new Date().getFullYear() > 2026 ? `-${new Date().getFullYear()}` : ''} Marco Rosso`,
+    projectTitle: T('aboutProject'),
+    homepage: 'https://github.com/marcorosso768/magic-calendar', homepageLabel: T('aboutSource'),
+    releases: 'https://github.com/marcorosso768/magic-calendar/releases', releasesLabel: T('aboutReleases'),
+    authorRole: T('aboutAuthorRole'), author: 'Marco Rosso',
+    sections: [
+      { title: T('aboutBuilt'), items: [
+        { label: 'Electron', text: `${v.electron} · Chromium ${v.chrome} · Node.js ${v.node}`, url: 'https://www.electronjs.org', urlLabel: 'electronjs.org' },
+      ] },
+      { title: T('aboutCredits'), items: [
+        { label: T('aboutFont'), text: T('aboutFontText') },
+        { label: T('aboutData'), text: T('aboutDataText') },
+        { label: T('aboutLicense'), text: T('aboutLicenseText') },
+      ] },
+    ],
+  };
+}
+
+ipcMain.handle('panel:init', (e) => {
+  const base = { dark: _isDark, lang: uiLang(), icon: panelIcon() };
+  if (aboutWin && !aboutWin.isDestroyed() && e.sender === aboutWin.webContents) return { ...base, about: aboutInfo() };
+  return { ...base, state: _updState || stateChecking() };
+});
+ipcMain.on('panel:action', (e, id) => {
+  if (updateWin && !updateWin.isDestroyed() && e.sender === updateWin.webContents) onUpdateAction(String(id));
+});
+ipcMain.on('panel:resize', (e, height) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (!win || win !== updateWin) return;
+  const h = Math.max(160, Math.min(620, Math.round(Number(height) || 0)));
+  const [w] = win.getContentSize();
+  win.setContentSize(w, h);
+});
+
+// ── Update window (Bartender style) ──────────────────────────────
+// One small window shows every step: checking, up to date, update available (with the notes),
+// downloading, ready to restart, errors. The main process decides the state; panels/update.js only
+// draws it and sends back the id of the button pressed.
+let _updState = null;        // state shown in the update window
+let _availableInfo = null;   // update found by the last check
+let _checkToken = 0;         // a cancelled check ignores its result
+
+function stateChecking() {
+  return { kind: 'checking', title: T('updChecking'), progress: 'indeterminate', buttons: [{ id: 'cancel', label: T('cancel') }] };
+}
+function stateUpToDate() {
+  return { kind: 'uptodate', title: T('updUpToDate'), message: T('updUpToDateMsg', app.getVersion()),
+    buttons: [{ id: 'close', label: T('ok'), primary: true }, { id: 'history', label: T('updHistory') }] };
+}
+function stateAvailable(info) {
+  return { kind: 'available', title: T('updAvailable', info.version), message: T('updAvailableMsg', app.getVersion()),
+    notes: releaseNotesText(info),
+    buttons: [{ id: 'install', label: T('install'), primary: true }, { id: 'later', label: T('later') }] };
+}
+function stateDownloading(version, percent) {
+  return { kind: 'downloading', title: T('updDownloading', version), progress: Math.max(0, Math.min(100, Math.round(percent || 0))), buttons: [] };
+}
+function stateReady(version) {
+  return { kind: 'ready', title: T('readyMsg', version), message: T('updReadyMsg'),
+    buttons: [{ id: 'restart', label: T('restartNow'), primary: true }, { id: 'later', label: T('later') }] };
+}
+function stateError(detail) {
+  return { kind: 'error', title: T('checkFailed'), message: `${T('updErrorMsg')}${detail ? `\n\n${detail}` : ''}`,
+    buttons: [{ id: 'close', label: T('close'), primary: true }, { id: 'releases', label: T('openReleases') }] };
+}
+function stateManual(detail) {
+  return { kind: 'manual', title: T('manualMsg'), message: detail,
+    buttons: [{ id: 'releases', label: T('openReleases'), primary: true }, { id: 'close', label: T('close') }] };
+}
+
+function setUpdateState(state, { show = true } = {}) {
+  _updState = state;
+  if (updateWin && !updateWin.isDestroyed()) updateWin.webContents.send('panel:state', state);
+  else if (show) openUpdateWindow();
+}
+
+function closeUpdateWindow() {
+  if (updateWin && !updateWin.isDestroyed()) updateWin.close();
+}
+
+async function offerManualDownload(detail) {
+  setUpdateState(stateManual(detail));
 }
 
 async function checkForUpdatesInteractive(userInitiated) {
   if (!app.isPackaged) {
-    if (userInitiated) {
-      dialog.showMessageBox(mainWindow, { type: 'info', message: T('devOnly'), buttons: ['OK'] });
-    }
+    if (userInitiated) setUpdateState({ kind: 'devonly', title: T('updChecking'), message: T('devOnly'), buttons: [{ id: 'close', label: T('ok'), primary: true }] });
     return;
   }
-  if (_updateBusy) return;
+  // A download is running or an update is waiting: show where it is instead of checking again.
+  if (_updState && ['downloading', 'ready'].includes(_updState.kind)) {
+    if (userInitiated) setUpdateState(_updState);
+    return;
+  }
+  const token = ++_checkToken;
+  if (userInitiated) setUpdateState(stateChecking());
   try {
     const result = await autoUpdater.checkForUpdates();
-    if (userInitiated && (!result || !result.isUpdateAvailable)) {
-      dialog.showMessageBox(mainWindow, { type: 'info', message: T('upToDate', app.getVersion()), buttons: ['OK'] });
+    if (token !== _checkToken) return;                     // cancelled meanwhile
+    if (result && result.isUpdateAvailable && result.updateInfo) {
+      _availableInfo = result.updateInfo;
+      setUpdateState(stateAvailable(result.updateInfo));   // also at launch: the window opens
+    } else if (userInitiated) {
+      setUpdateState(stateUpToDate());
     }
   } catch (err) {
-    if (userInitiated) {
-      const { response } = await dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        title: T('checkFailed'),
-        message: T('checkFailedMsg'),
-        detail: err && err.message ? err.message : String(err),
-        buttons: [T('openReleases'), T('close')],
-        defaultId: 0,
-        cancelId: 1
-      });
-      if (response === 0) shell.openExternal(releasePageUrl());
-    }
+    if (token !== _checkToken) return;
+    if (userInitiated) setUpdateState(stateError(err && err.message ? err.message : String(err)));
   }
 }
 
+// Release notes come from GitHub as HTML or Markdown: shown as plain text with bullets.
 function releaseNotesText(info) {
-  if (!info.releaseNotes) return T('youHave', app.getVersion());
+  if (!info.releaseNotes) return '';
   const notes = Array.isArray(info.releaseNotes)
     ? info.releaseNotes.map(n => n.note || '').join('\n')
     : String(info.releaseNotes);
-  // Release notes are Markdown (build-resources/release-notes.md): shown as plain text in the dialog.
-  const plain = notes
+  return notes
+    .replace(/<\s*li[^>]*>/gi, '• ').replace(/<\s*(br|\/p|\/li|\/h\d)[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/^#{1,6}\s*/gm, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*\*(.*?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1')
     .replace(/^\s*[-*]\s+/gm, '• ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-  return plain.slice(0, 800) || T('youHave', app.getVersion());
 }
 
 async function installMacUpdate(info) {
   // Already downloaded earlier (user chose "Later"): no second download.
   if (!_pendingMacInstaller || _pendingMacVersion !== info.version) {
-    sendToRenderer('update:downloading');
+    setUpdateState(stateDownloading(info.version, 0));
     try {
       _pendingMacInstaller = await macUpdater.prepareUpdate({
         fetchImpl: (url) => net.fetch(url),
@@ -351,85 +527,57 @@ async function installMacUpdate(info) {
         arch: process.arch,
         execPath: process.execPath,
         workRoot: updatesDir,
-        onProgress: (p) => sendToRenderer('update:progress', { percent: Math.round(p.percent || 0), transferred: p.transferred, total: p.total })
+        onProgress: (p) => setUpdateState(stateDownloading(info.version, p.percent), { show: false })
       });
       _pendingMacVersion = info.version;
     } catch (err) {
       console.warn('[updater] mac self-install unavailable:', err && err.message);
-      sendToRenderer('update:failed');
       const blocked = err && ['translocated', 'running-from-dmg', 'not-a-bundle'].includes(err.code);
       await offerManualDownload(blocked ? T('manualDetailDmg') : `${T('manualDetail')}\n\n${err && err.message ? err.message : ''}`.trim());
       return;
     }
   }
-  sendToRenderer('update:downloaded', { version: info.version });
-  const { response } = await dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: T('readyTitle'),
-    message: T('readyMsg', info.version),
-    detail: T('readyDetail'),
-    buttons: [T('restartNow'), T('later')],
-    defaultId: 0,
-    cancelId: 1
-  });
-  _pendingRelaunch = response === 0;
-  if (_pendingRelaunch) app.quit();   // the installer starts in 'will-quit'
+  setUpdateState(stateReady(info.version));
 }
 
-autoUpdater.on('update-available', async (info) => {
-  if (_updateBusy) return;
-  _updateBusy = true;
+async function startUpdate() {
+  const info = _availableInfo;
+  if (!info) return closeUpdateWindow();
+  if (process.platform === 'darwin') return installMacUpdate(info);
+  setUpdateState(stateDownloading(info.version, 0));
   try {
-    const { response } = await dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: T('updateAvailable'),
-      message: T('updateAvailableMsg', info.version),
-      detail: releaseNotesText(info),
-      buttons: [T('install'), T('later')],
-      defaultId: 0,
-      cancelId: 1
-    });
-    if (response !== 0) return;
-
-    if (process.platform === 'darwin') {
-      await installMacUpdate(info);
-      return;
-    }
-    sendToRenderer('update:downloading');
-    try {
-      await autoUpdater.downloadUpdate();   // continues in 'update-downloaded'
-    } catch (err) {
-      console.warn('[updater] downloadUpdate failed:', err);
-      sendToRenderer('update:failed');
-      await offerManualDownload(T('manualDetail'));
-    }
-  } finally {
-    _updateBusy = false;
+    await autoUpdater.downloadUpdate();   // continues in 'update-downloaded'
+  } catch (err) {
+    console.warn('[updater] downloadUpdate failed:', err);
+    await offerManualDownload(T('manualDetail'));
   }
-});
+}
+
+// Buttons of the update window
+function onUpdateAction(id) {
+  const kind = _updState && _updState.kind;
+  switch (id) {
+    case 'install':  startUpdate(); break;
+    case 'restart':
+      if (process.platform === 'darwin') { _pendingRelaunch = true; app.quit(); }   // installer starts in 'will-quit'
+      else setImmediate(() => autoUpdater.quitAndInstall());
+      break;
+    case 'history':  shell.openExternal('https://github.com/marcorosso768/magic-calendar/releases'); break;
+    case 'releases': shell.openExternal(releasePageUrl()); break;
+    case 'cancel':   _checkToken++; _updState = null; closeUpdateWindow(); break;
+    case 'escape':   if (kind !== 'downloading') { if (kind === 'checking') _checkToken++; closeUpdateWindow(); } break;
+    default:         closeUpdateWindow();   // close, later
+  }
+}
 
 autoUpdater.on('download-progress', (p) => {
-  sendToRenderer('update:progress', {
-    percent: Math.round(p.percent || 0),
-    transferred: p.transferred,
-    total: p.total,
-    bytesPerSecond: p.bytesPerSecond
-  });
+  const v = _availableInfo ? _availableInfo.version : '';
+  setUpdateState(stateDownloading(v, p.percent), { show: false });
 });
 
 // Windows only (macOS never calls downloadUpdate)
-autoUpdater.on('update-downloaded', async (info) => {
-  sendToRenderer('update:downloaded', { version: info.version });
-  const { response } = await dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: T('readyTitle'),
-    message: T('readyMsg', info.version),
-    detail: T('readyDetail'),
-    buttons: [T('restartNow'), T('later')],
-    defaultId: 0,
-    cancelId: 1
-  });
-  if (response === 0) setImmediate(() => autoUpdater.quitAndInstall());
+autoUpdater.on('update-downloaded', (info) => {
+  setUpdateState(stateReady(info.version));
 });
 
 autoUpdater.on('error', (err) => {
@@ -494,7 +642,11 @@ function refreshMacIconCacheIfChanged() {
 // Theme — single source of truth is the renderer (it already
 // resolves the user's light/dark/auto preference against the OS).
 // ──────────────────────────────────────────────────────────────
-ipcMain.on('dock:set-dark', (_, isDark) => applyThemedIcon(!!isDark));
+ipcMain.on('dock:set-dark', (_, isDark) => {
+  _isDark = !!isDark;
+  applyThemedIcon(_isDark);
+  for (const w of [updateWin, aboutWin]) if (w && !w.isDestroyed()) w.webContents.send('panel:theme', _isDark);
+});
 // Menu labels follow the UI language: rebuilt when the language changes in Settings.
 ipcMain.on('menu:refresh', () => buildAppMenu());
 

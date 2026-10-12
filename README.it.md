@@ -57,6 +57,7 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Oggi evidenziato, giorni passati attenuati, festività italiane
 - Conteggio dei giorni e conto alla rovescia al prossimo giorno di ogni tipo
 - Backup e ripristino di tutti i dati in un file
+- Selezione di più giorni, schemi settimanali (anche a settimane alterne), Annulla/Ripristina
 
 ---
 
