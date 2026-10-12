@@ -54,6 +54,9 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Salvataggio automatico
 - Esportazione PDF
 - Calendari multipli
+- Oggi evidenziato, giorni passati attenuati, festività italiane
+- Conteggio dei giorni e conto alla rovescia al prossimo giorno di ogni tipo
+- Backup e ripristino di tutti i dati in un file
 
 ---
 

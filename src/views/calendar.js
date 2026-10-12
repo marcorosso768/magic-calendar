@@ -55,11 +55,13 @@ const CalView = (() => {
       <div class="rainbow-bar"></div>
       <div class="cal-title">${theme.emoji} ${MONTHS[month]||''} ${year} ${theme.emoji}</div>
       <div class="cal-subtitle">${escapeHtml(s.subtitle || I18n.t('defaultSubtitle'))}</div>
+      <div id="cal-countdown" class="cal-countdown"></div>
     `;
     page.appendChild(hdr);
 
     // Legend — dinamica per tutti i tipi configurati
     const types = s.types || [];
+    const counts = CalUtils.countTypes(days, daysCount);
     const leg = document.createElement('div');
     leg.className = 'cal-legend';
     leg.innerHTML = types.map((t, i) => {
@@ -75,6 +77,7 @@ const CalView = (() => {
         <div class="legend-item">
           <div class="legend-swatch" style="background:${st.swatchBg};border:2px solid ${st.swatchBorder};display:flex;align-items:center;justify-content:center">${icon}</div>
           <div>${escapeHtml(t.label||'')}<br><small style="color:${st.lblColor}">${escapeHtml(t.sub||'')}</small></div>
+          <span class="legend-count" title="${escapeHtml(I18n.tf('daysThisMonth', counts[t.key] || 0))}">${counts[t.key] || 0}</span>
         </div>`;
     }).join('');
     leg.querySelectorAll('.legend-item').forEach((el, i) => {
@@ -122,7 +125,7 @@ const CalView = (() => {
     }
     for (let day = 1; day <= daysCount; day++) {
       const dd   = days[day] || { type:'neutral' };
-      const cell = buildCell(day, dd);
+      const cell = buildCell(day, dd, year, month);
       cell.addEventListener('click', () => openEditor(day, dd, calKey, year, month));
       grid.appendChild(cell);
     }
@@ -138,14 +141,32 @@ const CalView = (() => {
   }
 
   // ── Build day cell ────────────────────────────────────────────────
-  function buildCell(day, dd) {
+  function buildCell(day, dd, year, month) {
     const cell = document.createElement('div');
     cell.className = `day-cell ${dd.type||'neutral'}`;
+
+    // Past days (Settings → Past days) and today
+    const _set = SettingsManager.get();
+    const rel = CalUtils.relToToday(year, month, day);
+    const pastMode = _set.pastDays || 'dim';
+    if (rel < 0 && pastMode !== 'off') cell.classList.add('past', `past-${pastMode}`);
+    if (rel === 0) cell.classList.add('today');
 
     const num = document.createElement('div');
     num.className = 'day-num';
     num.textContent = day;
     cell.appendChild(num);
+
+    const hol = CalUtils.holidayFor(year, month, day, _set.holidays || 'it');
+    if (hol) {
+      const name = I18n.currentLang() === 'en' ? hol.en : hol.it;
+      cell.classList.add('holiday');
+      cell.title = name;
+      const h = document.createElement('div');
+      h.className = 'day-hol';
+      h.textContent = name;
+      cell.appendChild(h);
+    }
 
     const wrap = document.createElement('div');
     const _s = SettingsManager.get();
@@ -265,7 +286,9 @@ const CalView = (() => {
       const lbl = _typeDef2 ? _typeDef2.label : (dd.label || '');
       const lblColor = _typeSt2?.lblColor || '#9333ea';
       const lblHtml = lbl ? `<div class="day-lbl" style="font-size:7px;font-weight:800;text-align:center;color:${lblColor}">${pdfSafe(escapeHtml(lbl))}</div>` : '';
-      cellsHtml += `<div class="day-cell ${escapeHtml(dd.type||'neutral')}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${iconHtml}${lblHtml}</div>`;
+      const hol = CalUtils.holidayFor(year, month, day, s.holidays || 'it');
+      const holHtml = hol ? `<div class="day-hol">${escapeHtml(I18n.currentLang() === 'en' ? hol.en : hol.it)}</div>` : '';
+      cellsHtml += `<div class="day-cell ${escapeHtml(dd.type||'neutral')}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${holHtml}${iconHtml}${lblHtml}</div>`;
     }
 
     const wdayHtml = WDAYS.map((wd,i) =>
@@ -354,6 +377,7 @@ ${typesCss}
 .day-icon-wrap{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
 .day-icon-wrap img{width:100%;height:100%;object-fit:cover;border-radius:7px}
 .day-lbl{font-size:8px;font-weight:800;text-align:center;line-height:1.2;padding:0 2px}
+.day-hol{font-size:6.5px;font-weight:800;color:#dc2626;text-align:center;line-height:1.1;margin:-1px 0 1px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .together .day-lbl{color:#9333ea}.away .day-lbl{color:#be123c}
 .cal-footer{text-align:center;font-size:9px;color:#a855f7;font-weight:700;letter-spacing:3px;margin-top:12px;padding-bottom:4px}
 .deco-corner{position:absolute;font-size:22px;opacity:.6}

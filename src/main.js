@@ -103,6 +103,9 @@ function buildAppMenu() {
           click: () => sendToRenderer('menu:open-settings')
         }]),
         { type: 'separator' },
+        { label: T('menuExportBackup'), click: () => exportBackupInteractive() },
+        { label: T('menuImportBackup'), click: () => importBackupInteractive() },
+        { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
     },
@@ -206,6 +209,15 @@ const MAIN_STRINGS = {
     manualDetailDmg: 'L’app è aperta dall’immagine disco o da una cartella temporanea: spostala in Applicazioni per ricevere gli aggiornamenti automatici. Intanto puoi scaricare la nuova versione dalla pagina delle release.',
     openReleases: 'Apri la pagina delle release', close: 'Chiudi',
     savePdf: 'Salva PDF', chooseImage: 'Scegli un’immagine', images: 'Immagini',
+    menuExportBackup: 'Esporta backup…', menuImportBackup: 'Importa backup…',
+    backupSaveTitle: 'Esporta backup', backupOpenTitle: 'Importa backup', backupFilter: 'Backup di Magic Calendar',
+    backupSaved: 'Backup salvato', backupSavedMsg: (n) => `Il backup contiene ${n} calendari, la settimana, le impostazioni e le immagini.`,
+    showInFolder: 'Mostra nella cartella', ok: 'OK',
+    importInvalid: 'File non valido', importInvalidMsg: 'Il file scelto non è un backup di Magic Calendar.',
+    importConfirm: 'Sostituire i dati attuali con il backup?',
+    importConfirmDetail: (n, when, dir) => `Il backup (${when}) contiene ${n} calendari. Calendari, settimana, impostazioni e immagini attuali vengono sostituiti. Prima viene salvata una copia dei dati attuali in:\n${dir}`,
+    replace: 'Sostituisci', cancel: 'Annulla',
+    importFailed: 'Importazione non riuscita',
   },
   en: {
     menuCheckUpdates: 'Check for Updates…', menuSettings: 'Settings…', menuHomepage: 'Project Homepage',
@@ -223,6 +235,15 @@ const MAIN_STRINGS = {
     manualDetailDmg: 'The app is running from the disk image or a temporary folder: move it to Applications to get automatic updates. Meanwhile you can download the new version from the releases page.',
     openReleases: 'Open Releases Page', close: 'Close',
     savePdf: 'Save PDF', chooseImage: 'Choose an image', images: 'Images',
+    menuExportBackup: 'Export Backup…', menuImportBackup: 'Import Backup…',
+    backupSaveTitle: 'Export backup', backupOpenTitle: 'Import backup', backupFilter: 'Magic Calendar backup',
+    backupSaved: 'Backup saved', backupSavedMsg: (n) => `The backup contains ${n} calendars, the week plans, the settings and the images.`,
+    showInFolder: 'Show in Folder', ok: 'OK',
+    importInvalid: 'Invalid file', importInvalidMsg: 'The chosen file is not a Magic Calendar backup.',
+    importConfirm: 'Replace the current data with the backup?',
+    importConfirmDetail: (n, when, dir) => `The backup (${when}) contains ${n} calendars. The current calendars, week plans, settings and images are replaced. A copy of the current data is saved first in:\n${dir}`,
+    replace: 'Replace', cancel: 'Cancel',
+    importFailed: 'Import failed',
   },
 };
 
@@ -581,6 +602,137 @@ ipcMain.handle('image:list', () => {
     .sort((a, b) => b.t - a.t)
     .map(({ f }) => store.imageUrl(f));
 });
+
+// ──────────────────────────────────────────────────────────────
+// Backup and restore
+//   One JSON file with everything the app stores: calendars, week plans, settings and images
+//   (base64). Restoring replaces the current data; a copy of it is written first to
+//   userData/backups, so a wrong import can be undone by importing that copy.
+// ──────────────────────────────────────────────────────────────
+const BACKUP_FORMAT = 'magic-calendar-backup';
+const backupsDir = path.join(userData, 'backups');
+
+function collectBackup() {
+  const calendars = {};
+  for (const key of listCalendarKeys()) {
+    const d = store.readJsonSafe(calFile(key));
+    if (d) calendars[key] = d;
+  }
+  const images = {};
+  if (fs.existsSync(imagesDir)) {
+    for (const f of fs.readdirSync(imagesDir)) {
+      const p = path.join(imagesDir, f);
+      if (store.isValidImageName(f) && fs.statSync(p).isFile()) images[f] = fs.readFileSync(p).toString('base64');
+    }
+  }
+  return {
+    format: BACKUP_FORMAT, formatVersion: 1,
+    appVersion: app.getVersion(), createdAt: new Date().toISOString(),
+    settings: store.readJsonSafe(settingsF),
+    weekly: fs.existsSync(weeklyF) || fs.existsSync(`${weeklyF}.bak`) ? store.readJsonSafe(weeklyF) : null,
+    calendars, images,
+  };
+}
+
+// Throws if the file is not a usable backup. Keys and image names are checked as strictly as the
+// rest of the app (no paths), so a backup can never write outside the data folder.
+function validateBackup(b) {
+  const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  if (!isObj(b) || b.format !== BACKUP_FORMAT || typeof b.formatVersion !== 'number') throw new Error('format');
+  if (b.formatVersion > 1) throw new Error('newer format');
+  if (!isObj(b.calendars)) throw new Error('calendars');
+  for (const [k, d] of Object.entries(b.calendars)) if (!store.isValidKey(k) || !isObj(d)) throw new Error(`calendar ${k}`);
+  if (b.images != null && !isObj(b.images)) throw new Error('images');
+  for (const [n, data] of Object.entries(b.images || {})) {
+    if (!store.isValidImageName(n) || typeof data !== 'string') throw new Error(`image ${n}`);
+  }
+  if (b.settings != null && !isObj(b.settings)) throw new Error('settings');
+  if (b.weekly != null && !isObj(b.weekly)) throw new Error('weekly');
+}
+
+function restoreBackup(b) {
+  // Safety copy of the current data first.
+  fs.mkdirSync(backupsDir, { recursive: true });
+  const stampStr = new Date().toISOString().replace(/[:.]/g, '-');
+  const safety = path.join(backupsDir, `before-import-${stampStr}.json`);
+  fs.writeFileSync(safety, JSON.stringify(collectBackup()));
+
+  for (const key of listCalendarKeys()) {
+    const f = calFile(key);
+    for (const x of [f, `${f}.bak`]) if (fs.existsSync(x)) fs.unlinkSync(x);
+  }
+  for (const [k, d] of Object.entries(b.calendars)) store.writeJsonAtomic(calFile(k), d);
+  if (b.settings) store.writeJsonAtomic(settingsF, b.settings);
+  store.writeJsonAtomic(weeklyF, b.weekly || {});
+  fs.mkdirSync(imagesDir, { recursive: true });
+  // Images are added (same name: replaced); images already here stay, so nothing is lost.
+  for (const [n, data] of Object.entries(b.images || {})) fs.writeFileSync(path.join(imagesDir, n), Buffer.from(data, 'base64'));
+  return safety;
+}
+
+function localDate(d) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function exportBackupInteractive() {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: T('backupSaveTitle'),
+    defaultPath: path.join(app.getPath('documents'), `Magic-Calendar-backup-${localDate(new Date())}.json`),
+    filters: [{ name: T('backupFilter'), extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePath) return { ok: false };
+  const b = collectBackup();
+  const tmp = `${result.filePath}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(b));
+  fs.renameSync(tmp, result.filePath);
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'info', message: T('backupSaved'), detail: T('backupSavedMsg', Object.keys(b.calendars).length),
+    buttons: [T('ok'), T('showInFolder')], defaultId: 0, cancelId: 0
+  });
+  if (response === 1) shell.showItemInFolder(result.filePath);
+  return { ok: true, path: result.filePath };
+}
+
+async function importBackupInteractive() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: T('backupOpenTitle'),
+    properties: ['openFile'],
+    filters: [{ name: T('backupFilter'), extensions: ['json'] }]
+  });
+  if (result.canceled || !result.filePaths.length) return { ok: false };
+  let b;
+  try {
+    b = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
+    validateBackup(b);
+  } catch (err) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'warning', message: T('importInvalid'), detail: T('importInvalidMsg'), buttons: [T('ok')]
+    });
+    return { ok: false, error: String(err && err.message || err) };
+  }
+  const when = b.createdAt ? localDate(new Date(b.createdAt)) : '?';
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning', message: T('importConfirm'),
+    detail: T('importConfirmDetail', Object.keys(b.calendars).length, when, backupsDir),
+    buttons: [T('replace'), T('cancel')], defaultId: 1, cancelId: 1
+  });
+  if (response !== 0) return { ok: false };
+  try {
+    restoreBackup(b);
+  } catch (err) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error', message: T('importFailed'), detail: String(err && err.message || err), buttons: [T('ok')]
+    });
+    return { ok: false, error: String(err && err.message || err) };
+  }
+  buildAppMenu();                                   // the restored settings may change the language
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.reload();
+  return { ok: true };
+}
+
+ipcMain.handle('backup:export', () => exportBackupInteractive());
+ipcMain.handle('backup:import', () => importBackupInteractive());
 
 // ──────────────────────────────────────────────────────────────
 // PDF export

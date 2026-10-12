@@ -58,6 +58,9 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Automatic local saving
 - PDF export
 - Multiple calendars
+- Today highlighted, past days dimmed, Italian public holidays
+- Day counts and countdown to the next day of each type
+- Backup and restore of all data in one file
 
 ---
 

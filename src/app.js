@@ -44,6 +44,19 @@ const App = (() => {
       goToMonth(y, m);
     });
 
+    // Today: back to the current month
+    document.getElementById('btn-today')?.addEventListener('click', () => {
+      const n = new Date();
+      goToMonth(n.getFullYear(), n.getMonth());
+    });
+
+    // At midnight "today", the past days and the countdown move on: redraw once the date changes.
+    let _lastDay = CalUtils.todayStamp();
+    setInterval(() => {
+      const t = CalUtils.todayStamp();
+      if (t !== _lastDay) { _lastDay = t; renderCurrent(); }
+    }, 60000);
+
     // New calendar
     document.getElementById('btn-new').addEventListener('click', () => {
       // Populate month select with current language
@@ -246,6 +259,35 @@ const App = (() => {
     _currentCalData = saved;
     // Always draw the month stored in the calendar, so the grid and the saved days never diverge.
     CalView.render(saved?.year ?? year, saved?.month ?? month, calKey, saved);
+    updateCountdown();
+  }
+
+  // Countdown under the subtitle, only on the calendar of the current month: today's type and how
+  // many days until the next day of each other type. Following months are read from the calendar of
+  // that month when there is exactly one (with several, it is not clear which one counts).
+  async function updateCountdown() {
+    const el = document.getElementById('cal-countdown');
+    if (!el) return;
+    const now = new Date();
+    const shown = _currentCalData;
+    if (!shown || shown.year !== now.getFullYear() || shown.month !== now.getMonth()) { el.textContent = ''; return; }
+    const types = SettingsManager.get().types || [];
+    const months = [{ year: shown.year, month: shown.month, days: shown.days || {} }];
+    for (let i = 1; i <= 4; i++) {
+      const dt = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const cands = _calIndex.filter(c => c.year === dt.getFullYear() && c.month === dt.getMonth());
+      if (cands.length !== 1) continue;
+      const d = await Storage.load(cands[0].key);
+      if (d) months.push({ year: dt.getFullYear(), month: dt.getMonth(), days: d.days || {} });
+    }
+    if (!el.isConnected) return;   // the month was redrawn meanwhile
+    const parts = [];
+    for (const o of CalUtils.nextOccurrences(months, types.map(t => t.key), now)) {
+      const label = types.find(t => t.key === o.key)?.label || '';
+      if (o.inDays === 0) parts.unshift(I18n.tf('countdownToday', label));
+      else parts.push(o.inDays === 1 ? I18n.tf('countdownTomorrow', label) : I18n.tf('countdownIn', label, o.inDays));
+    }
+    el.textContent = parts.join('   ·   ');
   }
 
   // Month without a calendar: message and a button to create it.
@@ -318,6 +360,7 @@ const App = (() => {
   function renderMonthly(y, m, key, data) {
     _currentCalData = data;
     CalView.render(y, m, key, data);
+    updateCountdown();
   }
 
   function refresh() { renderCurrent(); }

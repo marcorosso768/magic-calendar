@@ -30,3 +30,6 @@ release/
 # Temporary
 *.tmp
 *.temp
+
+# Private notes (roadmap), never published
+future_release.md

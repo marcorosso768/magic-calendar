@@ -978,3 +978,52 @@ html.dark .cal-page, html.dark .week-page {
   border-radius: 0;
   box-shadow: none;
 }
+
+/* ── Today, past days, public holidays ───────────────────
+   Only in the app: the PDF export keeps every day at full colour. */
+.day-cell { position: relative; }
+.day-cell.today {
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.day-cell.today .day-num {
+  background: var(--accent); color: #fff !important;
+  border-radius: 999px; padding: 2px 6px; margin-top: -1px;
+}
+.day-cell.past { opacity: .42; filter: saturate(.55); transition: opacity .15s, filter .15s; }
+.day-cell.past:hover { opacity: .9; filter: none; }
+.day-cell.past-check::after {
+  content: '✓'; position: absolute; top: 3px; right: 5px;
+  font-size: 12px; font-weight: 900; color: #16a34a; opacity: .9;
+}
+.day-hol {
+  font-size: 7px; font-weight: 800; color: #dc2626; line-height: 1.1;
+  max-width: 100%; padding: 0 2px; margin: -1px 0 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html.dark .day-hol { color: #f87171; }
+
+/* Countdown under the subtitle and day counts in the legend */
+.cal-countdown {
+  min-height: 0; margin-top: 4px;
+  font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: .3px;
+}
+.cal-countdown:empty { display: none; }
+.legend-count {
+  min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 900; color: #fff; background: var(--primary);
+}
+
+/* Sidebar "Today" button, Settings backup buttons */
+.today-btn {
+  align-self: center; margin: -4px 0 8px; padding: 3px 12px;
+  border: 1.5px solid var(--border); border-radius: 999px; background: transparent;
+  font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 800; color: var(--primary);
+  cursor: pointer; transition: background .13s;
+}
+.today-btn:hover { background: var(--bg); }
+html.dark .today-btn { border-color: #3d2060; color: #c084fc; }
+html.dark .today-btn:hover { background: #2a1845; }
+.backup-row { display: flex; gap: 8px; flex-wrap: wrap; }

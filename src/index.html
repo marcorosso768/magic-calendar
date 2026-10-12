@@ -23,6 +23,7 @@
     <span id="month-label">Aprile 2026</span>
     <button id="next-month" class="arrow">›</button>
   </div>
+  <button id="btn-today" class="today-btn" data-i18n="todayBtn">📍 Oggi</button>
   <div class="sidebar-label">I tuoi calendari</div>
   <div id="saved-list" class="saved-list"></div>
   <button id="btn-new" class="btn-outline full">＋ Nuovo calendario</button>
@@ -209,6 +210,7 @@
 
 <!-- Scripts in correct order: i18n already loaded in <head> -->
 <script src="storage.js"></script>
+<script src="calendar-utils.js"></script>
 <script src="settings.js"></script>
 <script src="emoji-picker.js"></script>
 <script src="image-picker.js"></script>

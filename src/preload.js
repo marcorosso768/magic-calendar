@@ -35,6 +35,10 @@ contextBridge.exposeInMainWorld('api', {
   setDockDark: (isDark) => ipcRenderer.send('dock:set-dark', isDark),
   refreshMenu: ()       => ipcRenderer.send('menu:refresh'),
 
+  // Backup of all data to one file, and restore (the window reloads after a restore)
+  backupExport: () => ipcRenderer.invoke('backup:export'),
+  backupImport: () => ipcRenderer.invoke('backup:import'),
+
   // Auto-update
   checkForUpdates: ()                 => ipcRenderer.invoke('update:check'),
   onUpdateDownloading: (cb)           => ipcRenderer.on('update:downloading', () => cb()),

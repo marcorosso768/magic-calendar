@@ -38,6 +38,8 @@ function makeDefaults() {
     timeslots:   I18n.ta('timeslotDefaults').map(s => ({...s})),
     customIcons: [],
     timeFormat:  '24h',
+    pastDays:    'dim',   // 'dim' | 'check' (dimmed with a tick) | 'off'
+    holidays:    'it',    // 'it' (Italian public holidays) | 'off'
     themeSelectionCompleted: false,
     types: [
       { key:'together', emoji:'💜', label:I18n.t('legendTogether'), sub:I18n.t('legendTogetherSub'), mode:'avatar_family' },
@@ -267,7 +269,9 @@ function openSettings() {
 
   renderLangSelector(s.language);
   renderDarkModeSelector(s.darkMode || 'auto');
+  renderCalendarOptions(s);
   renderDayTypesSection(s);
+  renderBackupBlock();
   renderTimeFormatSelector(s.timeFormat || '24h');
   renderTimeslots(s.timeslots || []);
   renderCustomIcons(s.customIcons || []);
@@ -305,6 +309,62 @@ function renderDarkModeSelector(cur) {
     SettingsManager.set({ darkMode: e.target.value });
     applyDarkModeClass(e.target.value);
   });
+}
+
+// Past days and public holidays: applied as soon as they change (restored if Settings is closed
+// without saving, like the other options).
+function renderCalendarOptions(s) {
+  let block = document.getElementById('calopts-block');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'calopts-block';
+    block.className = 'settings-block';
+    const after = document.getElementById('darkmode-block') || document.getElementById('lang-block');
+    if (after) after.insertAdjacentElement('afterend', block);
+    else document.querySelector('#modal-settings .modal-body').prepend(block);
+  }
+  const past = s.pastDays || 'dim', hol = s.holidays || 'it';
+  block.innerHTML = `
+    <div class="settings-title">${I18n.t('pastDaysSection')}</div>
+    <select id="pastdays-select">
+      <option value="dim"   ${past==='dim'  ?'selected':''}>${I18n.t('pastDim')}</option>
+      <option value="check" ${past==='check'?'selected':''}>${I18n.t('pastCheck')}</option>
+      <option value="off"   ${past==='off'  ?'selected':''}>${I18n.t('pastOff')}</option>
+    </select>
+    <div class="settings-title" style="margin-top:12px">${I18n.t('holidaysSection')}</div>
+    <select id="holidays-select">
+      <option value="it"  ${hol==='it' ?'selected':''}>${I18n.t('holidaysIt')}</option>
+      <option value="off" ${hol==='off'?'selected':''}>${I18n.t('holidaysOff')}</option>
+    </select>
+  `;
+  document.getElementById('pastdays-select').addEventListener('change', e => {
+    SettingsManager.set({ pastDays: e.target.value }); App.refresh();
+  });
+  document.getElementById('holidays-select').addEventListener('change', e => {
+    SettingsManager.set({ holidays: e.target.value }); App.refresh();
+  });
+}
+
+// Backup: all calendars, week plans, settings and images in one file (main.js does the work).
+function renderBackupBlock() {
+  let block = document.getElementById('backup-block');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'backup-block';
+    block.className = 'settings-block';
+    document.querySelector('#modal-settings .modal-body').appendChild(block);
+  }
+  block.innerHTML = `
+    <div class="settings-title">${I18n.t('backupSection')}</div>
+    <p class="hint">${I18n.t('backupHint')}</p>
+    <div class="backup-row">
+      <button id="btn-backup-export" class="btn-sm">${I18n.t('backupExport')}</button>
+      <button id="btn-backup-import" class="btn-sm">${I18n.t('backupImport')}</button>
+    </div>
+  `;
+  document.getElementById('btn-backup-export').addEventListener('click', () => window.api.backupExport());
+  // After a restore the main process reloads the window with the restored data.
+  document.getElementById('btn-backup-import').addEventListener('click', () => window.api.backupImport());
 }
 
 function renderDayTypesSection(s) {
