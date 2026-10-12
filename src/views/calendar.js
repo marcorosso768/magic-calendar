@@ -97,7 +97,7 @@ const CalView = (() => {
         const allTypes = [...types, { key: nextTypeKey(types), emoji:'🌟', label: isIt ? `Tipo ${newIdx+1}` : `Type ${newIdx+1}`, sub:'', mode:'emoji' }];
         SettingsManager.set({ types: allTypes });
         await SettingsManager.save();
-        const saved = await Storage.load(_curCalKey);
+        const saved = _curCalKey ? await Storage.load(_curCalKey) : { year: _curYear, month: _curMonth, days: {} };
         App.renderMonthly(_curYear, _curMonth, _curCalKey, saved);
       });
       leg.appendChild(addBtn);
@@ -597,7 +597,7 @@ ${typesCss}
           await SettingsManager.save();
           popup.remove();
           document.getElementById('qte-emoji-popup')?.remove();
-          const saved = await Storage.load(_curCalKey);
+          const saved = _curCalKey ? await Storage.load(_curCalKey) : { year: _curYear, month: _curMonth, days: {} };
           App.renderMonthly(_curYear, _curMonth, _curCalKey, saved);
         });
         br.appendChild(del);
@@ -621,7 +621,7 @@ ${typesCss}
         await SettingsManager.save();
         popup.remove();
         document.getElementById('qte-emoji-popup')?.remove();
-        const saved = await Storage.load(_curCalKey);
+        const saved = _curCalKey ? await Storage.load(_curCalKey) : { year: _curYear, month: _curMonth, days: {} };
         App.renderMonthly(_curYear, _curMonth, _curCalKey, saved);
       });
       rightBtns.appendChild(cancel); rightBtns.appendChild(save);
@@ -653,7 +653,10 @@ ${typesCss}
   function initListeners() {
     document.getElementById('btn-day-save').addEventListener('click', async () => {
       if (!_editing) return;
-      const { day, calKey, year, month } = _editing;
+      const { day, year, month } = _editing;
+      // Month without a calendar yet: it is created now, with this first day.
+      const calKey = _editing.calKey || await App.ensureCalendar(year, month);
+      if (!calKey) return;
 
       const activeType = document.querySelector('#day-type-picker .type-opt.active');
       const type  = activeType?.dataset.type || 'neutral';

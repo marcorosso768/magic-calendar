@@ -88,7 +88,28 @@ const CalUtils = (() => {
     return [...found.values()].sort((a, b) => a.inDays - b.inDays);
   }
 
-  return { easterSunday, italianHolidays, holidayFor, stamp, todayStamp, relToToday, countTypes, daysBetween, nextOccurrences };
+  // Copies a month onto another one by day of the week: the n-th Monday of the new month takes the
+  // n-th Monday of the source (cycling when the source has fewer), so weekly and alternate-week
+  // patterns carry over. Only the day type and the activity icon are copied (no images, no notes).
+  function copyByWeekday(srcYear, srcMonth, srcDays, dstYear, dstMonth) {
+    const byWeekday = [[], [], [], [], [], [], []];
+    const srcCount = new Date(srcYear, srcMonth + 1, 0).getDate();
+    for (let d = 1; d <= srcCount; d++) byWeekday[new Date(srcYear, srcMonth, d).getDay()].push(d);
+    const seen = [0, 0, 0, 0, 0, 0, 0];
+    const out = {};
+    const dstCount = new Date(dstYear, dstMonth + 1, 0).getDate();
+    for (let d = 1; d <= dstCount; d++) {
+      const wd = new Date(dstYear, dstMonth, d).getDay();
+      const list = byWeekday[wd];
+      const srcDay = list[seen[wd]++ % list.length];
+      const sd = srcDays && srcDays[srcDay];
+      if (!sd || ((!sd.type || sd.type === 'neutral') && !sd.icon)) continue;
+      out[d] = { type: sd.type || 'neutral', icon: sd.icon || '', image: '', note: '', label: sd.label || '' };
+    }
+    return out;
+  }
+
+  return { easterSunday, italianHolidays, holidayFor, stamp, todayStamp, relToToday, countTypes, daysBetween, nextOccurrences, copyByWeekday };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = CalUtils;

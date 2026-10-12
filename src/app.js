@@ -58,17 +58,7 @@ const App = (() => {
     }, 60000);
 
     // New calendar
-    document.getElementById('btn-new').addEventListener('click', () => {
-      // Populate month select with current language
-      const sel = document.getElementById('new-month');
-      const mNames = I18n.ta('months');
-      sel.innerHTML = mNames.map((n,i) =>
-        `<option value="${i}" ${i===month?'selected':''}>${n}</option>`
-      ).join('');
-      document.getElementById('new-year').value  = year;
-      document.getElementById('new-name').value  = '';
-      document.getElementById('modal-new').classList.remove('hidden');
-    });
+    document.getElementById('btn-new').addEventListener('click', () => openNewModal(null));
 
     document.getElementById('btn-new-confirm').addEventListener('click', async () => {
       const sel     = document.getElementById('new-month');
@@ -82,7 +72,12 @@ const App = (() => {
       }
       yearInp.classList.remove('invalid');
       const name = document.getElementById('new-name').value.trim();
-      await createCalendar(y, m, name);
+      let days = {};
+      if (_copyFrom) {
+        const src = await Storage.load(_copyFrom);
+        if (src) days = CalUtils.copyByWeekday(src.year, src.month, src.days || {}, y, m);
+      }
+      await createCalendar(y, m, name, days);
       document.getElementById('modal-new').classList.add('hidden');
     });
 
@@ -94,12 +89,11 @@ const App = (() => {
       if (view === 'weekly') {
         return WeekView.buildPrintHTML(_expLandscape, _expCentered);
       }
-      const saved = await Storage.load(calKey);
+      const saved = calKey ? await Storage.load(calKey) : null;
       return CalView.buildPrintHTML(saved?.year ?? year, saved?.month ?? month, calKey, saved, _expLandscape, _expCentered);
     }
 
-    // The monthly export needs a calendar; the weekly one does not.
-    const canExport = () => view === 'weekly' || !!calKey;
+    const canExport = () => true;
 
     async function refreshExportPreview() {
       if (!canExport()) return;
@@ -227,15 +221,15 @@ const App = (() => {
     // Load saved calendars
     await refreshSavedList();
 
-    // Auto-select: the calendar of the current month; otherwise create it if there are no calendars
-    // at all, or show the first one.
+    // Always open on the current month: its calendar if there is one, otherwise an empty month ready
+    // to fill (the calendar file is created with the first saved day).
     const current = _calIndex.find(c => c.year === year && c.month === month);
     if (current) {
       await selectCal(current.key);
-    } else if (_calIndex.length === 0) {
-      await createCalendar(year, month, '');
     } else {
-      await selectCal(_calIndex[0].key);
+      calKey = null;
+      markActive();
+      await renderCurrent();
     }
     updateMonthLabel();
 
@@ -250,8 +244,10 @@ const App = (() => {
       return;
     }
     if (!calKey) {
-      _currentCalData = null;
-      renderEmptyMonth();
+      // Month without a calendar: the empty grid, ready to fill (see ensureCalendar).
+      _currentCalData = { year, month, days: {} };
+      CalView.render(year, month, null, _currentCalData);
+      updateCountdown();
       return;
     }
     const saved = await Storage.load(calKey);
@@ -290,24 +286,6 @@ const App = (() => {
     el.textContent = parts.join('   ·   ');
   }
 
-  // Month without a calendar: message and a button to create it.
-  function renderEmptyMonth() {
-    const months = I18n.ta('months');
-    const label  = `${months[month] || ''} ${year}`;
-    const cont   = document.getElementById('view-monthly');
-    cont.innerHTML = '';
-    const box = document.createElement('div');
-    box.className = 'empty-month';
-    const msg = document.createElement('p');
-    msg.textContent = I18n.tf('noCalendarForMonth', label);
-    const btn = document.createElement('button');
-    btn.className = 'btn-accent';
-    btn.textContent = I18n.tf('createForMonth', label);
-    btn.addEventListener('click', () => createCalendar(year, month, ''));
-    box.append(msg, btn);
-    cont.appendChild(box);
-  }
-
   // Calendar keys: a readable name plus year and month, made unique. Two calendars can never get
   // the same key, so creating one never overwrites another.
   function makeKey(name, y, m) {
@@ -323,15 +301,46 @@ const App = (() => {
     return key;
   }
 
+  // Calendar of a month that has none yet: created when its first day is saved.
+  async function ensureCalendar(y, m) {
+    if (calKey && year === y && month === m) return calKey;
+    await createCalendar(y, m, '');
+    return calKey;
+  }
+
+  // "New calendar" form; with copyFrom, the days of that calendar are copied into the chosen month
+  // by day of the week (CalUtils.copyByWeekday).
+  let _copyFrom = null;
+  function openNewModal(copyFrom) {
+    _copyFrom = copyFrom;
+    const src = copyFrom ? _calIndex.find(c => c.key === copyFrom) : null;
+    const now = new Date();
+    // Copying usually means "this month from that one": suggest the current month, or the next one
+    // if the current month already has a calendar.
+    let target = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (_calIndex.some(c => c.year === target.getFullYear() && c.month === target.getMonth())) target = new Date(target.getFullYear(), target.getMonth() + 1, 1);
+    const selM = src ? target.getMonth() : month, selY = src ? target.getFullYear() : year;
+    const sel = document.getElementById('new-month');
+    const mNames = I18n.ta('months');
+    sel.innerHTML = mNames.map((n,i) => `<option value="${i}" ${i===selM?'selected':''}>${n}</option>`).join('');
+    document.getElementById('new-year').value = selY;
+    document.getElementById('new-name').value = '';
+    const title = document.querySelector('#modal-new .modal-head h2');
+    if (title) title.textContent = src ? I18n.tf('copyCalendarTitle', src.name) : I18n.t('newCalendarTitle');
+    const hint = document.getElementById('new-copy-hint');
+    if (hint) { hint.textContent = src ? I18n.t('copyCalendarHint') : ''; hint.classList.toggle('hidden', !src); }
+    document.getElementById('modal-new').classList.remove('hidden');
+  }
+
   let _creating = false;   // ignores double clicks while a calendar is being created
-  async function createCalendar(y, m, name) {
+  async function createCalendar(y, m, name, days = {}) {
     if (_creating) return;
     _creating = true;
     try {
       const months = I18n.ta('months');
       const finalName = name || `${months[m] || ''} ${y}`.trim();
       await refreshSavedList();                     // up-to-date list before choosing the key
-      const data = { year: y, month: m, days: {}, name: finalName };
+      const data = { year: y, month: m, days, name: finalName };
       let key = makeKey(finalName, y, m);
       // The main process refuses to overwrite an existing file: try the next free key.
       for (let n = 2; !(await Storage.create(key, data)).ok; n++) key = `${makeKey(finalName, y, m)}_x${n}`;
@@ -368,11 +377,17 @@ const App = (() => {
   async function refreshSavedList() {
     const keys = await Storage.list();
     const list = document.getElementById('saved-list');
+    const entries = [];
+    for (const k of keys) {
+      const d = await Storage.load(k);
+      entries.push({ k, d, name: d?.name || k.replace(/_/g,' ') });
+    }
+    // Newest month first; same month: by name.
+    const rank = (e) => (e.d?.year ?? 0) * 12 + (e.d?.month ?? 0);
+    entries.sort((a, b) => rank(b) - rank(a) || a.name.localeCompare(b.name));
     list.innerHTML = '';
     _calIndex = [];
-    for (const k of keys) {
-      const d    = await Storage.load(k);
-      const name = d?.name || k.replace(/_/g,' ');
+    for (const { k, d, name } of entries) {
       _calIndex.push({ key: k, name, year: d?.year, month: d?.month });
       const item = document.createElement('div');
       item.className = 'saved-item' + (k===calKey?' active':'');
@@ -381,6 +396,13 @@ const App = (() => {
       const sp = document.createElement('span');
       sp.textContent = name;
       item.appendChild(sp);
+
+      const copy = document.createElement('button');
+      copy.className = 'saved-item-copy';
+      copy.textContent = '⧉';
+      copy.title = I18n.t('copyCalendar');
+      copy.addEventListener('click', e => { e.stopPropagation(); openNewModal(k); });
+      item.appendChild(copy);
 
       const del = document.createElement('button');
       del.className = 'saved-item-del';
@@ -426,7 +448,7 @@ const App = (() => {
     if (ml) ml.textContent = `${months[month]||''} ${year}`;
   }
 
-  return { init, refresh, renderMonthly };
+  return { init, refresh, renderMonthly, ensureCalendar };
 })();
 
 // updateStaticStrings è definita in settings.js (versione completa con App.refresh())

@@ -143,6 +143,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 680,
     show: false,
+    center: true,               // opens in the middle of the screen
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: isMac ? { x: 14, y: 16 } : undefined,
 

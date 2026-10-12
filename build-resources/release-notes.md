@@ -1,13 +1,19 @@
-## 🦄 Magic Calendar v1.3.1
+## 🦄 Magic Calendar v1.3.2
 
-A small fix for the app icon.
+A new icon, and the app always opens on today's month.
+
+### ✨ What's new
+- **Opens on the current month**, ready to fill in: the calendar of a new month is created by itself when you save its first day. Months without a calendar no longer show an empty page
+- **Copy a calendar to another month** (⧉ next to its name in the sidebar): days are copied by day of the week, so weekly and alternate-week patterns carry over. Images and notes are not copied
+- Calendars in the sidebar are listed from the newest month
+- The window opens in the middle of the screen
 
 ### 🎨 Icon
-- After an update that changes the icon, the Dock and Finder show the new one right away, without logging out (the Dock restarts once)
+- New, simpler icon: a calendar with a heart, clear even at small sizes, in light and dark versions
 
 ### 🖥️ Platforms
-- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.3.1-mac-arm64.dmg`, Intel → `Magic-Calendar-1.3.1-mac-x64.dmg`
-- Windows 10 or later → `Magic-Calendar-1.3.1-win-x64.exe`
+- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.3.2-mac-arm64.dmg`, Intel → `Magic-Calendar-1.3.2-mac-x64.dmg`
+- Windows 10 or later → `Magic-Calendar-1.3.2-win-x64.exe`
 
 ### 📦 Notes
 If you have version 1.1.0 or later, this update installs itself.

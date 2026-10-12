@@ -116,6 +116,13 @@ body.is-macos #sidebar { padding-top: 20px; }
   font-size: 12px; cursor: pointer; opacity: 0; transition: opacity .13s;
 }
 .saved-item:hover .saved-item-del { opacity: 1; }
+.saved-item-copy {
+  background: none; border: none; color: var(--primary);
+  font-size: 13px; cursor: pointer; opacity: 0; transition: opacity .13s; padding: 0 2px;
+}
+.saved-item:hover .saved-item-copy { opacity: .85; }
+.saved-item-copy:hover { opacity: 1 !important; }
+#new-copy-hint.hidden { display: none; }
 
 .spacer { flex: 1; min-height: 12px; }
 

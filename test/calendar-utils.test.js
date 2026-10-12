@@ -38,3 +38,19 @@ test('next occurrences across months and DST', () => {
   const r = U.nextOccurrences(months, ['together', 'away', 'type3', 'type4'], now);
   assert.deepEqual(r.map(x => [x.key, x.inDays]), [['away', 0], ['together', 18], ['type3', 21]]);
 });
+
+test('copy by weekday keeps weekly and alternate-week patterns', () => {
+  // April 2026: Mondays 6, 13, 20, 27. Alternate weeks on Mondays; every Saturday "together".
+  const src = { 6: { type: 'away' }, 13: { type: 'together' }, 20: { type: 'away' }, 27: { type: 'together' },
+                4: { type: 'together', image: 'mcimg://local/x.png', note: 'n' }, 11: { type: 'together' }, 18: { type: 'together' }, 25: { type: 'together' },
+                1: { type: 'neutral', icon: '⚽' } };
+  const out = U.copyByWeekday(2026, 3, src, 2026, 10); // November 2026
+  // Mondays of November 2026: 2, 9, 16, 23, 30 → away, together, away, together, away (cycles)
+  assert.deepEqual([2, 9, 16, 23, 30].map(d => out[d] && out[d].type), ['away', 'together', 'away', 'together', 'away']);
+  // Saturdays: 7, 14, 21, 28 → together; image and note are not copied
+  assert.equal(out[7].type, 'together'); assert.equal(out[7].image, ''); assert.equal(out[7].note, '');
+  // 1 April 2026 is a Wednesday with only an icon: first Wednesday of November is the 4th
+  assert.equal(out[4].icon, '⚽');
+  // Tuesdays had nothing
+  assert.equal(out[3], undefined);
+});
