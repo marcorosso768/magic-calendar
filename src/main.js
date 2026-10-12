@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net, screen } = require('electron');
 app.setName('Magic Calendar');
 const path = require('path');
 const fs   = require('fs');
@@ -155,13 +155,21 @@ function createWindow() {
   const isMac = process.platform === 'darwin';
   const isWin = process.platform === 'win32';
 
+  // Open centred on the screen the pointer is on, sized to fit its work area (menu bar and Dock
+  // excluded). `center: true` alone uses the primary display, and a window taller than the
+  // work area cannot be centred, so macOS pins it to the top.
+  const { workArea: wa } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const winW = Math.min(1320, Math.round(wa.width * 0.92));
+  const winH = Math.min(880, Math.round(wa.height * 0.92));
+
   mainWindow = new BrowserWindow({
-    width: 1320,
-    height: 880,
-    minWidth: 960,
-    minHeight: 680,
+    width: winW,
+    height: winH,
+    x: Math.round(wa.x + (wa.width - winW) / 2),
+    y: Math.round(wa.y + (wa.height - winH) / 2),
+    minWidth: Math.min(960, winW),
+    minHeight: Math.min(680, winH),
     show: false,
-    center: true,               // opens in the middle of the screen
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: isMac ? { x: 14, y: 16 } : undefined,
 
