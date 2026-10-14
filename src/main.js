@@ -435,8 +435,8 @@ ipcMain.on('panel:resize', (e, height) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!win || win !== updateWin) return;
   const h = Math.max(110, Math.min(620, Math.round(Number(height) || 0)));
-  const [w] = win.getContentSize();
-  win.setContentSize(w, h);
+  const [w, cur] = win.getContentSize();
+  if (h !== cur) win.setContentSize(w, h);   // resizing at every progress step made the window shake
 });
 
 // ── Update window (Bartender style) ──────────────────────────────
@@ -480,6 +480,15 @@ function stateDownloading(version, p = {}) {
 }
 function formatMB(bytes) {
   return (bytes / 1e6).toLocaleString(uiLang() === 'it' ? 'it-IT' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' MB';
+}
+// The download reports progress for every chunk received (hundreds of times a second): the window is
+// updated at most every 150 ms, and always at 100%.
+let _lastProgressAt = 0;
+function sendProgress(version, p) {
+  const now = Date.now();
+  if (now - _lastProgressAt < 150 && Number(p && p.percent) < 100) return;
+  _lastProgressAt = now;
+  setUpdateState(stateDownloading(version, p), { show: false });
 }
 let _dlAbort = null;   // AbortController (macOS) or CancellationToken (Windows) of the running download
 function stateReady(version) {
@@ -568,7 +577,7 @@ async function installMacUpdate(info) {
         arch: process.arch,
         execPath: process.execPath,
         workRoot: updatesDir,
-        onProgress: (p) => { if (!ctrl.signal.aborted) setUpdateState(stateDownloading(info.version, p), { show: false }); }
+        onProgress: (p) => { if (!ctrl.signal.aborted) sendProgress(info.version, p); }
       });
       _pendingMacVersion = info.version;
     } catch (err) {
@@ -630,7 +639,7 @@ function onUpdateAction(id) {
 
 autoUpdater.on('download-progress', (p) => {
   const v = _availableInfo ? _availableInfo.version : '';
-  if (_dlAbort) setUpdateState(stateDownloading(v, p), { show: false });
+  if (_dlAbort) sendProgress(v, p);
 });
 
 // Windows only (macOS never calls downloadUpdate)

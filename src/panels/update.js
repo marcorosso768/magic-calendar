@@ -1,5 +1,6 @@
 // Update window: draws the state sent by the main process (title, message, notes, progress, details, buttons).
 const $ = (id) => document.getElementById(id);
+let _lastHeight = 0;
 
 function render(s) {
   $('title').textContent = s.title || '';
@@ -28,7 +29,11 @@ function render(s) {
     const primary = box.querySelector('.primary');
     if (primary) primary.focus();
   }
-  requestAnimationFrame(() => window.panel.resize(document.body.scrollHeight));
+  // Ask for a new height only when it changes (not at every progress update).
+  requestAnimationFrame(() => {
+    const h = document.body.scrollHeight;
+    if (h !== _lastHeight) { _lastHeight = h; window.panel.resize(h); }
+  });
 }
 
 document.addEventListener('keydown', (e) => {
