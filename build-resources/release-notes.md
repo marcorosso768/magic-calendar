@@ -1,14 +1,13 @@
-## 🦄 Magic Calendar v1.5.2
+## 🦄 Magic Calendar v1.5.3
 
-A roomier update window.
+A better-sized update window.
 
 ### 🛠️ Fixes
-- The update window is wider and lower: the buttons fit on one line and Skip This Version sits at the left edge
-- The window always takes the height of its content: no more scrollbar on the whole window. Only the release notes scroll, with a thin scrollbar that follows the theme
+- The update window adapts its width to what it shows: compact for short messages (checking, up to date, downloading, ready to restart), a little wider when it shows what’s new in an update
 
 ### 🖥️ Platforms
-- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.5.2-mac-arm64.dmg`, Intel → `Magic-Calendar-1.5.2-mac-x64.dmg`
-- Windows 10 or later → `Magic-Calendar-1.5.2-win-x64.exe`
+- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.5.3-mac-arm64.dmg`, Intel → `Magic-Calendar-1.5.3-mac-x64.dmg`
+- Windows 10 or later → `Magic-Calendar-1.5.3-win-x64.exe`
 
 ### 📦 Notes
 If you have version 1.1.0 or later, this update installs itself.

@@ -360,19 +360,34 @@ function createPanel(file, opts) {
   return win;
 }
 
-const UPDATE_W = 660;
+// Width of the update window: compact for short messages (checking, up to date, downloading, ready),
+// wider only when the release notes and three buttons are shown.
+const UPDATE_W_SMALL = 460, UPDATE_W_WIDE = 520;
+function updateWidth(state = _updState) {
+  return state && (state.notes || (state.buttons || []).length > 2) ? UPDATE_W_WIDE : UPDATE_W_SMALL;
+}
+// Changes the width keeping the window centred where it is.
+function setUpdateWidth(w) {
+  if (!updateWin || updateWin.isDestroyed()) return;
+  const [cw, ch] = updateWin.getContentSize();
+  if (cw === w) return;
+  const [x, y] = updateWin.getPosition();
+  updateWin.setContentSize(w, ch);
+  updateWin.setPosition(Math.round(x + (cw - w) / 2), y);
+}
 
 function openUpdateWindow() {
   if (updateWin && !updateWin.isDestroyed()) { updateWin.show(); updateWin.focus(); return; }
   // Sparkle style: a normal small window with its own title bar, only the close button active.
+  const W = updateWidth();
   updateWin = createPanel('update.html', {
-    width: UPDATE_W, height: 170, title: T('updWindowTitle'),
+    width: W, height: 170, useContentSize: true, title: T('updWindowTitle'),
     titleBarStyle: 'default', skipTaskbar: true, backgroundColor: _isDark ? '#2a2a2c' : '#ececec',
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
   });
   if (mainWindow && !mainWindow.isDestroyed()) {
     const b = mainWindow.getBounds();
-    updateWin.setPosition(Math.round(b.x + (b.width - UPDATE_W) / 2), Math.round(b.y + Math.min(140, b.height / 5)));
+    updateWin.setPosition(Math.round(b.x + (b.width - W) / 2), Math.round(b.y + Math.min(140, b.height / 5)));
   } else {
     updateWin.center();
   }
@@ -506,7 +521,10 @@ function stateManual(detail) {
 
 function setUpdateState(state, { show = true } = {}) {
   _updState = state;
-  if (updateWin && !updateWin.isDestroyed()) updateWin.webContents.send('panel:state', state);
+  if (updateWin && !updateWin.isDestroyed()) {
+    setUpdateWidth(updateWidth(state));
+    updateWin.webContents.send('panel:state', state);
+  }
   else if (show) openUpdateWindow();
 }
 
