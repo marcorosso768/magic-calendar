@@ -1,6 +1,6 @@
 {
   "name": "magic-calendar",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Calendario personalizzabile per tutte le famiglie con bambini",
   "main": "src/main.js",
   "scripts": {
