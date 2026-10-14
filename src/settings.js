@@ -40,6 +40,10 @@ function makeDefaults() {
     timeFormat:  '24h',
     pastDays:    'dim',   // 'dim' | 'check' (dimmed with a tick) | 'off'
     holidays:    'it',    // 'it' (Italian public holidays) | 'off'
+    // School year and vacation periods (see school-utils.js); colours are the cell backgrounds.
+    school:      { enabled: true, colors: { ...SchoolUtils.DEFAULT_COLORS }, years: {}, dismissed: {}, periods: [] },
+    bridges:     true,    // mark bridge days ("ponti")
+    patron:      null,    // { city, month, day, name } — patron saint's day, a local holiday
     themeSelectionCompleted: false,
     types: [
       { key:'together', emoji:'💜', label:I18n.t('legendTogether'), sub:I18n.t('legendTogetherSub'), mode:'avatar_family' },
@@ -120,6 +124,8 @@ const SettingsManager = (() => {
       delete s.type1; delete s.type2;
     }
     if (!s.types || !s.types.length) s.types = defaults.types;
+    s.school = { ...defaults.school, ...(s.school || {}) };
+    s.school.colors = { ...SchoolUtils.DEFAULT_COLORS, ...(s.school.colors || {}) };
 
     // 5. Auto-traduce subtitle/footer/types se ancora ai valori default
     translateDefaultTexts(I18n.currentLang());
@@ -270,6 +276,7 @@ function openSettings() {
   renderLangSelector(s.language);
   renderDarkModeSelector(s.darkMode || 'auto');
   renderCalendarOptions(s);
+  renderSchoolBlock(s);
   renderDayTypesSection(s);
   renderBackupBlock();
   renderTimeFormatSelector(s.timeFormat || '24h');
@@ -343,6 +350,80 @@ function renderCalendarOptions(s) {
   document.getElementById('holidays-select').addEventListener('change', e => {
     SettingsManager.set({ holidays: e.target.value }); App.refresh();
   });
+}
+
+// School and holidays: colours of school/vacation days, the school-year window, bridge days and the
+// patron saint's day. Applied as soon as they change, like the options above.
+function renderSchoolBlock(s) {
+  let block = document.getElementById('school-block');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'school-block';
+    block.className = 'settings-block';
+    const after = document.getElementById('calopts-block');
+    if (after) after.insertAdjacentElement('afterend', block);
+    else document.querySelector('#modal-settings .modal-body').prepend(block);
+  }
+  const sc = s.school || {};
+  const now = new Date();
+  const Y = SchoolUtils.schoolYearOf(now.getFullYear(), now.getMonth());
+  const cur = (sc.years || {})[Y];
+  const fmt = (iso) => { const p = SchoolUtils.parse(iso); return p ? new Date(p.y, p.m, p.d).toLocaleDateString(I18n.currentLang() === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : ''; };
+  const colors = { ...SchoolUtils.DEFAULT_COLORS, ...(sc.colors || {}) };
+  const pat = s.patron;
+  const listed = pat && SchoolUtils.PATRONS.find(p => p.city === pat.city && p.month === pat.month && p.day === pat.day);
+  const patSel = !pat ? '' : listed ? pat.city : '__other';
+  const pad = (n) => String(n).padStart(2, '0');
+  block.innerHTML = `
+    <div class="settings-title">${I18n.t('schoolSection')}</div>
+    <label class="set-check"><input type="checkbox" id="school-enabled" ${sc.enabled !== false ? 'checked' : ''}> ${escapeHtml(I18n.t('schoolEnabled'))}</label>
+    <p class="hint">${escapeHtml(cur ? I18n.tf('schoolYearSummary', Y, fmt(cur.start), fmt(cur.end)) : I18n.t('schoolNoYear'))}</p>
+    <button id="btn-school-edit" class="btn-sm">${escapeHtml(I18n.t('schoolEdit'))}</button>
+    <div class="set-colors">
+      <label><input type="color" id="school-color-school" value="${colors.school}"> ${escapeHtml(I18n.t('schoolColorSchool'))}</label>
+      <label><input type="color" id="school-color-vacation" value="${colors.vacation}"> ${escapeHtml(I18n.t('schoolColorVacation'))}</label>
+      <button id="btn-school-colors-reset" class="btn-sm">${escapeHtml(I18n.t('schoolColorsReset'))}</button>
+    </div>
+    <label class="set-check"><input type="checkbox" id="bridges-check" ${s.bridges !== false ? 'checked' : ''}> ${escapeHtml(I18n.t('bridgesLabel'))}</label>
+    <div class="settings-title" style="margin-top:12px">⛪ ${escapeHtml(I18n.t('patronLabel'))}</div>
+    <select id="patron-select">
+      <option value="" ${patSel === '' ? 'selected' : ''}>${escapeHtml(I18n.t('patronNone'))}</option>
+      ${SchoolUtils.PATRONS.map(p => `<option value="${escapeHtml(p.city)}" ${patSel === p.city ? 'selected' : ''}>${escapeHtml(p.city)} · ${p.day} ${escapeHtml(I18n.ta('months')[p.month].toLowerCase())} (${escapeHtml(p.name)})</option>`).join('')}
+      <option value="__other" ${patSel === '__other' ? 'selected' : ''}>${escapeHtml(I18n.t('patronOther'))}</option>
+    </select>
+    <div id="patron-other" class="set-colors ${patSel === '__other' ? '' : 'hidden'}">
+      <input type="text" id="patron-city" placeholder="${escapeHtml(I18n.t('patronCityPh'))}" value="${escapeHtml(patSel === '__other' ? pat.city || '' : '')}">
+      <input type="text" id="patron-name" placeholder="${escapeHtml(I18n.t('patronNamePh'))}" value="${escapeHtml(patSel === '__other' ? pat.name || '' : '')}">
+      <input type="date" id="patron-date" value="${patSel === '__other' ? `${now.getFullYear()}-${pad(pat.month + 1)}-${pad(pat.day)}` : ''}">
+    </div>
+  `;
+  const setSchool = (patch) => { SettingsManager.set({ school: { ...SettingsManager.get().school, ...patch } }); App.refresh(); };
+  document.getElementById('school-enabled').addEventListener('change', e => setSchool({ enabled: e.target.checked }));
+  document.getElementById('btn-school-edit').addEventListener('click', () => SchoolView.open(Y));
+  const setColor = () => setSchool({ colors: { school: document.getElementById('school-color-school').value, vacation: document.getElementById('school-color-vacation').value } });
+  document.getElementById('school-color-school').addEventListener('input', setColor);
+  document.getElementById('school-color-vacation').addEventListener('input', setColor);
+  document.getElementById('btn-school-colors-reset').addEventListener('click', () => {
+    setSchool({ colors: { ...SchoolUtils.DEFAULT_COLORS } });
+    document.getElementById('school-color-school').value = SchoolUtils.DEFAULT_COLORS.school;
+    document.getElementById('school-color-vacation').value = SchoolUtils.DEFAULT_COLORS.vacation;
+  });
+  document.getElementById('bridges-check').addEventListener('change', e => { SettingsManager.set({ bridges: e.target.checked }); App.refresh(); });
+  const readOther = () => {
+    const p = SchoolUtils.parse(document.getElementById('patron-date').value);
+    const city = document.getElementById('patron-city').value.trim();
+    SettingsManager.set({ patron: p ? { city, name: document.getElementById('patron-name').value.trim(), month: p.m, day: p.d } : null });
+    App.refresh();
+  };
+  document.getElementById('patron-select').addEventListener('change', e => {
+    const v = e.target.value;
+    document.getElementById('patron-other').classList.toggle('hidden', v !== '__other');
+    if (v === '__other') return readOther();
+    const p = SchoolUtils.PATRONS.find(x => x.city === v);
+    SettingsManager.set({ patron: p ? { ...p } : null });
+    App.refresh();
+  });
+  ['patron-city', 'patron-name', 'patron-date'].forEach(id => document.getElementById(id).addEventListener('change', readOther));
 }
 
 // Backup: all calendars, week plans, settings and images in one file (main.js does the work).

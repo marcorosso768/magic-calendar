@@ -1,9 +1,9 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, nativeImage, protocol, net, screen, systemPreferences } = require('electron');
 app.setName('Magic Calendar');
 const path = require('path');
 const fs   = require('fs');
 const { pathToFileURL } = require('url');
-const { autoUpdater } = require('electron-updater');
+const { autoUpdater, CancellationToken } = require('electron-updater');
 const store = require('./fs-store');
 const macUpdater = require('./mac-updater');
 
@@ -240,8 +240,9 @@ const MAIN_STRINGS = {
     updChecking: 'Ricerca aggiornamenti…', updUpToDate: 'Sei aggiornato!',
     updUpToDateMsg: (v) => `Magic Calendar ${v} è la versione più recente.`,
     updAvailable: (v) => `È disponibile Magic Calendar ${v}`, updAvailableMsg: (v) => `Hai la versione ${v}. Vuoi installare l’aggiornamento?`,
+    updWindowTitle: 'Aggiornamento di Magic Calendar', updBytes: (a, b) => `${a} di ${b}`, updStarting: 'Connessione…',
     updDownloading: (v) => `Scaricamento di Magic Calendar ${v}…`, updReadyMsg: 'Riavvia per completare l’aggiornamento. Se scegli Più tardi, verrà installato alla chiusura dell’app.',
-    updHistory: 'Storico versioni', updErrorMsg: 'Controlla la connessione e riprova più tardi.',
+    updHistory: 'Storico versioni', updSkip: 'Salta questa versione', updErrorMsg: 'Controlla la connessione e riprova più tardi.',
     aboutVersion: (v) => `Versione ${v}`, aboutProject: 'Il progetto Magic Calendar', aboutSource: 'Codice su GitHub', aboutReleases: 'Tutte le versioni',
     aboutAuthorRole: 'Programmazione, design e manutenzione', aboutBuilt: 'Costruito con', aboutCredits: 'Crediti',
     aboutFont: 'Carattere', aboutFontText: 'Nunito, di Vernon Adams (SIL Open Font License)',
@@ -277,8 +278,9 @@ const MAIN_STRINGS = {
     updChecking: 'Checking for updates…', updUpToDate: 'You’re up to date!',
     updUpToDateMsg: (v) => `Magic Calendar ${v} is the newest version available.`,
     updAvailable: (v) => `Magic Calendar ${v} is available`, updAvailableMsg: (v) => `You have version ${v}. Install the update?`,
+    updWindowTitle: 'Updating Magic Calendar', updBytes: (a, b) => `${a} of ${b}`, updStarting: 'Connecting…',
     updDownloading: (v) => `Downloading Magic Calendar ${v}…`, updReadyMsg: 'Restart to finish updating. If you choose Later, it will be installed when you quit the app.',
-    updHistory: 'Version History', updErrorMsg: 'Check your connection and try again later.',
+    updHistory: 'Version History', updSkip: 'Skip This Version', updErrorMsg: 'Check your connection and try again later.',
     aboutVersion: (v) => `Version ${v}`, aboutProject: 'The Magic Calendar project', aboutSource: 'Source on GitHub', aboutReleases: 'All versions',
     aboutAuthorRole: 'Programmer, designer & maintainer', aboutBuilt: 'Built with', aboutCredits: 'Credits',
     aboutFont: 'Typeface', aboutFontText: 'Nunito, by Vernon Adams (SIL Open Font License)',
@@ -358,21 +360,26 @@ function createPanel(file, opts) {
   return win;
 }
 
+const UPDATE_W = 500;
+
 function openUpdateWindow() {
   if (updateWin && !updateWin.isDestroyed()) { updateWin.show(); updateWin.focus(); return; }
+  // Sparkle style: a normal small window with its own title bar, only the close button active.
   updateWin = createPanel('update.html', {
-    width: 380, height: 300, frame: false, roundedCorners: true, skipTaskbar: true,
+    width: UPDATE_W, height: 170, title: T('updWindowTitle'),
+    titleBarStyle: 'default', skipTaskbar: true, backgroundColor: _isDark ? '#2a2a2c' : '#ececec',
     parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined,
   });
   if (mainWindow && !mainWindow.isDestroyed()) {
     const b = mainWindow.getBounds();
-    updateWin.setPosition(Math.round(b.x + (b.width - 380) / 2), Math.round(b.y + Math.min(160, b.height / 4)));
+    updateWin.setPosition(Math.round(b.x + (b.width - UPDATE_W) / 2), Math.round(b.y + Math.min(140, b.height / 5)));
   } else {
     updateWin.center();
   }
   updateWin.on('closed', () => {
     updateWin = null;
     // Closing while checking cancels the check; closing an available update means "later".
+    if (_updState && _updState.kind === 'downloading') { if (_dlAbort) _dlAbort.cancel(); _dlAbort = null; _updState = null; }
     if (_updState && ['checking', 'uptodate', 'error', 'manual', 'devonly', 'available'].includes(_updState.kind)) {
       if (_updState.kind === 'checking') _checkToken++;
       _updState = null;
@@ -415,7 +422,9 @@ function aboutInfo() {
 }
 
 ipcMain.handle('panel:init', (e) => {
-  const base = { dark: _isDark, lang: uiLang(), icon: panelIcon() };
+  let accent = '';
+  try { if (systemPreferences.getAccentColor) accent = '#' + systemPreferences.getAccentColor().slice(0, 6); } catch (_) {}
+  const base = { dark: _isDark, lang: uiLang(), icon: panelIcon(), accent };
   if (aboutWin && !aboutWin.isDestroyed() && e.sender === aboutWin.webContents) return { ...base, about: aboutInfo() };
   return { ...base, state: _updState || stateChecking() };
 });
@@ -425,7 +434,7 @@ ipcMain.on('panel:action', (e, id) => {
 ipcMain.on('panel:resize', (e, height) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!win || win !== updateWin) return;
-  const h = Math.max(160, Math.min(620, Math.round(Number(height) || 0)));
+  const h = Math.max(110, Math.min(620, Math.round(Number(height) || 0)));
   const [w] = win.getContentSize();
   win.setContentSize(w, h);
 });
@@ -448,11 +457,31 @@ function stateUpToDate() {
 function stateAvailable(info) {
   return { kind: 'available', title: T('updAvailable', info.version), message: T('updAvailableMsg', app.getVersion()),
     notes: releaseNotesText(info),
-    buttons: [{ id: 'install', label: T('install'), primary: true }, { id: 'later', label: T('later') }] };
+    buttons: [{ id: 'install', label: T('install'), primary: true }, { id: 'later', label: T('later') },
+      { id: 'skip', label: T('updSkip'), left: true }] };
 }
-function stateDownloading(version, percent) {
-  return { kind: 'downloading', title: T('updDownloading', version), progress: Math.max(0, Math.min(100, Math.round(percent || 0))), buttons: [] };
+
+// "Skip this version": the automatic check at launch stays silent for that version;
+// a manual check (or a newer version) shows it again.
+function skippedVersionFile() { return path.join(userData, 'update-skip.json'); }
+function getSkippedVersion() {
+  try { return JSON.parse(fs.readFileSync(skippedVersionFile(), 'utf8')).version || ''; } catch (_) { return ''; }
 }
+function setSkippedVersion(version) {
+  try { fs.writeFileSync(skippedVersionFile(), JSON.stringify({ version })); } catch (e) { console.warn('[updater] skip not saved:', e.message); }
+}
+// Sparkle style: bar plus "12.5 MB of 116.1 MB" on the left and Cancel on the right.
+function stateDownloading(version, p = {}) {
+  const pct = Math.max(0, Math.min(100, Number(p.percent) || 0));
+  const total = Number(p.total) || 0, done = Number(p.transferred) || 0;
+  return { kind: 'downloading', title: T('updDownloading', version), progress: pct,
+    detail: total ? T('updBytes', formatMB(done), formatMB(total)) : T('updStarting'),
+    buttons: [{ id: 'canceldl', label: T('cancel') }] };
+}
+function formatMB(bytes) {
+  return (bytes / 1e6).toLocaleString(uiLang() === 'it' ? 'it-IT' : 'en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' MB';
+}
+let _dlAbort = null;   // AbortController (macOS) or CancellationToken (Windows) of the running download
 function stateReady(version) {
   return { kind: 'ready', title: T('readyMsg', version), message: T('updReadyMsg'),
     buttons: [{ id: 'restart', label: T('restartNow'), primary: true }, { id: 'later', label: T('later') }] };
@@ -497,6 +526,7 @@ async function checkForUpdatesInteractive(userInitiated) {
     if (token !== _checkToken) return;                     // cancelled meanwhile
     if (result && result.isUpdateAvailable && result.updateInfo) {
       _availableInfo = result.updateInfo;
+      if (!userInitiated && getSkippedVersion() === result.updateInfo.version) return;   // skipped by the user
       setUpdateState(stateAvailable(result.updateInfo));   // also at launch: the window opens
     } else if (userInitiated) {
       setUpdateState(stateUpToDate());
@@ -527,22 +557,28 @@ function releaseNotesText(info) {
 async function installMacUpdate(info) {
   // Already downloaded earlier (user chose "Later"): no second download.
   if (!_pendingMacInstaller || _pendingMacVersion !== info.version) {
-    setUpdateState(stateDownloading(info.version, 0));
+    setUpdateState(stateDownloading(info.version));
+    const ctrl = new AbortController();
+    _dlAbort = { cancel: () => ctrl.abort() };
     try {
       _pendingMacInstaller = await macUpdater.prepareUpdate({
-        fetchImpl: (url) => net.fetch(url),
+        fetchImpl: (url, init) => net.fetch(url, init),
+        signal: ctrl.signal,
         info,
         arch: process.arch,
         execPath: process.execPath,
         workRoot: updatesDir,
-        onProgress: (p) => setUpdateState(stateDownloading(info.version, p.percent), { show: false })
+        onProgress: (p) => { if (!ctrl.signal.aborted) setUpdateState(stateDownloading(info.version, p), { show: false }); }
       });
       _pendingMacVersion = info.version;
     } catch (err) {
+      if (ctrl.signal.aborted) return;   // cancelled by the user: the window is already closed
       console.warn('[updater] mac self-install unavailable:', err && err.message);
       const blocked = err && ['translocated', 'running-from-dmg', 'not-a-bundle'].includes(err.code);
       await offerManualDownload(blocked ? T('manualDetailDmg') : `${T('manualDetail')}\n\n${err && err.message ? err.message : ''}`.trim());
       return;
+    } finally {
+      _dlAbort = null;
     }
   }
   setUpdateState(stateReady(info.version));
@@ -552,13 +588,25 @@ async function startUpdate() {
   const info = _availableInfo;
   if (!info) return closeUpdateWindow();
   if (process.platform === 'darwin') return installMacUpdate(info);
-  setUpdateState(stateDownloading(info.version, 0));
+  setUpdateState(stateDownloading(info.version));
+  const token = new CancellationToken();
+  _dlAbort = { cancel: () => token.cancel() };
   try {
-    await autoUpdater.downloadUpdate();   // continues in 'update-downloaded'
+    await autoUpdater.downloadUpdate(token);   // continues in 'update-downloaded'
   } catch (err) {
+    if (token.cancelled) return;
     console.warn('[updater] downloadUpdate failed:', err);
     await offerManualDownload(T('manualDetail'));
+  } finally {
+    _dlAbort = null;
   }
+}
+
+function cancelDownload() {
+  if (_dlAbort) _dlAbort.cancel();
+  _dlAbort = null;
+  _updState = null;
+  closeUpdateWindow();
 }
 
 // Buttons of the update window
@@ -573,6 +621,8 @@ function onUpdateAction(id) {
     case 'history':  shell.openExternal('https://github.com/marcorosso768/magic-calendar/releases'); break;
     case 'releases': shell.openExternal(releasePageUrl()); break;
     case 'cancel':   _checkToken++; _updState = null; closeUpdateWindow(); break;
+    case 'canceldl': cancelDownload(); break;
+    case 'skip':     if (_availableInfo) setSkippedVersion(_availableInfo.version); _updState = null; closeUpdateWindow(); break;
     case 'escape':   if (kind !== 'downloading') { if (kind === 'checking') _checkToken++; closeUpdateWindow(); } break;
     default:         closeUpdateWindow();   // close, later
   }
@@ -580,7 +630,7 @@ function onUpdateAction(id) {
 
 autoUpdater.on('download-progress', (p) => {
   const v = _availableInfo ? _availableInfo.version : '';
-  setUpdateState(stateDownloading(v, p.percent), { show: false });
+  if (_dlAbort) setUpdateState(stateDownloading(v, p), { show: false });
 });
 
 // Windows only (macOS never calls downloadUpdate)

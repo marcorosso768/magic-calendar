@@ -8,6 +8,22 @@ const TYPE_STYLES = [
   { cellBg:'linear-gradient(160deg,#f0fdf4,#dcfce7)', cellBorder:'#22c55e', numColor:'#15803d', lblColor:'#15803d', swatchBg:'#f0fdf4', swatchBorder:'#22c55e' },
 ];
 
+// Settings bits used to colour school/vacation days and to mark bridges and the patron saint's day.
+function schoolCfg(s) {
+  return { holidays: s.holidays || 'it', school: s.school, patron: s.patron, bridges: s.bridges };
+}
+// Labels under the day number: public holiday, patron saint's day, bridge day.
+function dayMarks(year, month, day, s) {
+  const en = I18n.currentLang() === 'en';
+  const out = [];
+  const hol = CalUtils.holidayFor(year, month, day, s.holidays || 'it');
+  if (hol) out.push({ cls: 'day-hol', text: en ? hol.en : hol.it });
+  const pat = SchoolUtils.patronFor(year, month, day, s.patron);
+  if (pat && !hol) out.push({ cls: 'day-hol', text: pat.name || pat.city || I18n.t('patronLabel') });
+  if (!hol && !pat && SchoolUtils.isBridge(year, month, day, schoolCfg(s))) out.push({ cls: 'day-bridge', text: I18n.t('bridgeName') });
+  return out;
+}
+
 const CalView = (() => {
   let _editing = null;
   let _imgUrl  = '';
@@ -85,6 +101,8 @@ const CalView = (() => {
       el.title = I18n.currentLang() === 'it' ? 'Modifica tipo' : 'Edit type';
       el.addEventListener('click', e => { e.stopPropagation(); _openQuickTypeEditor(i, el); });
     });
+    const seasonLeg = seasonLegendHtml(year, month, daysCount, s);
+    if (seasonLeg) leg.insertAdjacentHTML('beforeend', seasonLeg);
     if (types.length < 4) {
       const addBtn = document.createElement('button');
       addBtn.className = 'btn-sm legend-add-btn';
@@ -267,15 +285,20 @@ const CalView = (() => {
     num.textContent = day;
     cell.appendChild(num);
 
-    const hol = CalUtils.holidayFor(year, month, day, _set.holidays || 'it');
-    if (hol) {
-      const name = I18n.currentLang() === 'en' ? hol.en : hol.it;
-      cell.classList.add('holiday');
-      cell.title = name;
+    for (const mk of dayMarks(year, month, day, _set)) {
+      if (mk.cls === 'day-hol') cell.classList.add('holiday');
+      cell.title = cell.title ? `${cell.title} · ${mk.text}` : mk.text;
       const h = document.createElement('div');
-      h.className = 'day-hol';
-      h.textContent = name;
+      h.className = mk.cls;
+      h.textContent = mk.text;
       cell.appendChild(h);
+    }
+
+    // School / vacation background (Settings → School and holidays)
+    const season = SchoolUtils.seasonFor(year, month, day, schoolCfg(_set));
+    if (season) {
+      cell.classList.add(`season-${season}`);
+      cell.style.setProperty('--season', (_set.school.colors || {})[season] || SchoolUtils.DEFAULT_COLORS[season]);
     }
 
     const wrap = document.createElement('div');
@@ -329,6 +352,16 @@ const CalView = (() => {
     }
 
     return cell;
+  }
+
+  // "School / Vacation" swatches in the legend, only when the month has such days.
+  function seasonLegendHtml(year, month, daysCount, s) {
+    const found = new Set();
+    for (let d = 1; d <= daysCount; d++) { const x = SchoolUtils.seasonFor(year, month, d, schoolCfg(s)); if (x) found.add(x); }
+    if (!found.size) return '';
+    const colors = { ...SchoolUtils.DEFAULT_COLORS, ...((s.school || {}).colors || {}) };
+    return `<div class="season-legend">${['school', 'vacation'].filter(k => found.has(k)).map(k =>
+      `<span class="season-chip"><i style="background:${colors[k]}"></i>${escapeHtml(I18n.t(k === 'school' ? 'legendSchool' : 'legendVacation'))}</span>`).join('')}</div>`;
   }
 
   // Sostituisce emoji che Chromium non renderizza correttamente in stampa PDF
@@ -396,9 +429,10 @@ const CalView = (() => {
       const lbl = _typeDef2 ? _typeDef2.label : (dd.label || '');
       const lblColor = _typeSt2?.lblColor || '#9333ea';
       const lblHtml = lbl ? `<div class="day-lbl" style="font-size:7px;font-weight:800;text-align:center;color:${lblColor}">${pdfSafe(escapeHtml(lbl))}</div>` : '';
-      const hol = CalUtils.holidayFor(year, month, day, s.holidays || 'it');
-      const holHtml = hol ? `<div class="day-hol">${escapeHtml(I18n.currentLang() === 'en' ? hol.en : hol.it)}</div>` : '';
-      cellsHtml += `<div class="day-cell ${escapeHtml(dd.type||'neutral')}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${holHtml}${iconHtml}${lblHtml}</div>`;
+      const holHtml = dayMarks(year, month, day, s).map(mk => `<div class="${mk.cls}">${escapeHtml(mk.text)}</div>`).join('');
+      const season = SchoolUtils.seasonFor(year, month, day, schoolCfg(s));
+      const seasonAttr = season ? ` season-${season}" style="--season:${(s.school.colors || {})[season] || SchoolUtils.DEFAULT_COLORS[season]}` : '';
+      cellsHtml += `<div class="day-cell ${escapeHtml(dd.type||'neutral')}${seasonAttr}"><div class="day-num" style="font-size:11px;font-weight:900;margin-bottom:2px">${day}</div>${holHtml}${iconHtml}${lblHtml}</div>`;
     }
 
     const wdayHtml = WDAYS.map((wd,i) =>
@@ -448,7 +482,7 @@ const CalView = (() => {
         <div class="cal-title">${theme.emoji} ${MONTHS[month]||''} ${year} ${theme.emoji}</div>
         <div class="cal-subtitle">${escapeHtml(s.subtitle||I18n.t('defaultSubtitle'))}</div>
       </div>
-      <div class="cal-legend">${legendItemsHtml}</div>
+      <div class="cal-legend">${legendItemsHtml}${seasonLegendHtml(year, month, daysCount, s)}</div>
       <div class="wdays">${wdayHtml}</div>
       <div class="days-grid">${cellsHtml}</div>
       <div class="cal-footer">${pdfSafe(escapeHtml(s.footer||I18n.t('defaultFooter')))}</div>`;
@@ -487,7 +521,13 @@ ${typesCss}
 .day-icon-wrap{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
 .day-icon-wrap img{width:100%;height:100%;object-fit:cover;border-radius:7px}
 .day-lbl{font-size:8px;font-weight:800;text-align:center;line-height:1.2;padding:0 2px}
-.day-hol{font-size:6.5px;font-weight:800;color:#dc2626;text-align:center;line-height:1.1;margin:-1px 0 1px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.day-hol,.day-bridge{font-size:6.5px;font-weight:800;color:#dc2626;text-align:center;line-height:1.1;margin:-1px 0 1px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.day-bridge{color:#d97706}
+.day-cell.neutral.season-school,.day-cell.neutral.season-vacation{background:var(--season) !important}
+.day-cell.season-school:not(.neutral):not(.empty),.day-cell.season-vacation:not(.neutral):not(.empty){box-shadow:inset 0 -5px 0 color-mix(in srgb,var(--season),#000 18%)}
+.season-legend{display:flex;gap:10px;align-items:center}
+.season-chip{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;color:#374151}
+.season-chip i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.12);display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .together .day-lbl{color:#9333ea}.away .day-lbl{color:#be123c}
 .cal-footer{text-align:center;font-size:9px;color:#a855f7;font-weight:700;letter-spacing:3px;margin-top:12px;padding-bottom:4px}
 .deco-corner{position:absolute;font-size:22px;opacity:.6}

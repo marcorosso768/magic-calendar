@@ -175,6 +175,23 @@
   </div>
 </div>
 
+<!-- School year -->
+<div id="modal-school" class="modal hidden">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h2 id="school-title">🎒 Anno scolastico</h2>
+      <button class="close-btn" data-close="modal-school">✕</button>
+    </div>
+    <div class="modal-body" id="school-body"></div>
+    <div class="modal-foot">
+      <button id="school-never" class="btn-outline school-never" data-i18n="schoolNever">Non usare</button>
+      <button id="school-save" class="btn-accent" data-i18n="schoolSave">Salva</button>
+      <button id="school-later" class="btn-outline" data-i18n="schoolLater">Più tardi</button>
+      <button id="school-cancel" class="btn-outline" data-i18n="cancel">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <!-- Theme welcome -->
 <div id="modal-theme-welcome" class="modal hidden">
   <div class="modal-box narrow">
@@ -207,9 +224,16 @@
         <button id="export-btn-center" class="btn-sm active-mode">⊞ Centra</button>
         <button id="export-btn-fit" class="btn-sm">⊡ Adatta</button>
       </div>
+      <div id="export-range-row" class="export-range-row">
+        <select id="export-range"></select>
+        <span id="export-custom" class="export-custom hidden">
+          <input type="month" id="export-from"> → <input type="month" id="export-to">
+        </span>
+      </div>
       <div id="export-preview-wrap">
         <iframe id="export-iframe" scrolling="no"></iframe>
       </div>
+      <div id="export-pages" class="export-pages"></div>
     </div>
     <div class="modal-foot">
       <button id="btn-export-save" class="btn-accent">Salva PDF</button>
@@ -222,6 +246,7 @@
 <!-- Scripts in correct order: i18n already loaded in <head> -->
 <script src="storage.js"></script>
 <script src="calendar-utils.js"></script>
+<script src="school-utils.js"></script>
 <script src="day-ops.js"></script>
 <script src="whats-new.js"></script>
 <script src="settings.js"></script>
@@ -231,6 +256,7 @@
 <script src="views/weekly.js"></script>
 <script src="views/pattern.js"></script>
 <script src="views/tour.js"></script>
+<script src="views/school.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

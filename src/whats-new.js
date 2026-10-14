@@ -50,6 +50,35 @@ const WHATS_NEW = [
       },
     ],
   },
+  {
+    version: '1.5.0',
+    steps: [
+      {
+        target: '#view-monthly .days-grid',
+        title: { it: 'Giorni di scuola e di vacanza', en: 'School days and vacation days' },
+        text: {
+          it: 'Inserisci il primo e l’ultimo giorno di scuola e le vacanze (Natale, Carnevale, Pasqua o ferie in famiglia): i giorni di scuola e quelli di vacanza hanno uno sfondo diverso, anche nel PDF. Dal 1° settembre l’app chiede le date del nuovo anno scolastico.',
+          en: 'Enter the first and last day of school and the holidays (Christmas, Carnival, Easter or family holidays): school days and vacation days get a different background, also in the PDF. From 1 September the app asks for the dates of the new school year.',
+        },
+      },
+      {
+        target: null,
+        title: { it: 'Ponti e santo patrono', en: 'Bridge days and patron saint' },
+        text: {
+          it: 'I ponti (il giorno tra una festa e il fine settimana) sono segnati in arancione. In Impostazioni → Scuola e vacanze scegli la tua città per il santo patrono, cambi i colori o modifichi l’anno scolastico.',
+          en: 'Bridge days (between a holiday and the weekend) are marked in orange. In Settings → School and holidays you choose your city for the patron saint’s day, change the colours or edit the school year.',
+        },
+      },
+      {
+        target: '#btn-export',
+        title: { it: 'PDF di più mesi', en: 'PDF of several months' },
+        text: {
+          it: 'Nell’esportazione scegli anche più mesi, l’anno scolastico da settembre a giugno o l’anno intero: un mese per pagina, in un solo PDF.',
+          en: 'When exporting you can also choose several months, the school year from September to June or the whole year: one month per page, in a single PDF.',
+        },
+      },
+    ],
+  },
 ];
 
 // "1.10.0" > "1.9.2"

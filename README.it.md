@@ -52,12 +52,13 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Tipologie di giorno per famiglie
 - Supporto italiano / inglese
 - Salvataggio automatico
-- Esportazione PDF
+- Esportazione PDF, anche di più mesi o dell’anno intero
 - Calendari multipli
 - Oggi evidenziato, giorni passati attenuati, festività italiane
 - Conteggio dei giorni e conto alla rovescia al prossimo giorno di ogni tipo
 - Backup e ripristino di tutti i dati in un file
 - Selezione di più giorni, schemi settimanali (anche a settimane alterne), Annulla/Ripristina
+- Giorni di scuola e di vacanza con colori diversi, ponti, santo patrono
 
 ---
 

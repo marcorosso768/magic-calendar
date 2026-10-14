@@ -56,12 +56,13 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Family-oriented day types
 - Italian / English interface
 - Automatic local saving
-- PDF export
+- PDF export, also of several months or a whole year
 - Multiple calendars
 - Today highlighted, past days dimmed, Italian public holidays
 - Day counts and countdown to the next day of each type
 - Backup and restore of all data in one file
 - Select several days at once, weekly patterns (also alternate weeks), Undo/Redo
+- School days and vacation days in different colours, bridge days, patron saint's day
 
 ---
 

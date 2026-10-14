@@ -1107,3 +1107,49 @@ html.dark #sel-bar button { background: #1a1025; border-color: #3d2060; color: #
 .tour-buttons .tour-next { background: var(--primary); border-color: var(--primary); color: #fff; }
 .tour-buttons button:focus { outline: none; }
 html.dark .tour-bubble { background: #231535; border-color: #3d2060; }
+
+/* ── School / vacation days, bridges, patron (1.5.0) ─────── */
+.day-bridge {
+  font-size: 9px; font-weight: 800; color: #d97706; text-align: center; line-height: 1.1;
+  max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: -1px 0 1px;
+}
+html.dark .day-bridge { color: #fbbf24; }
+.day-cell.neutral.season-school, .day-cell.neutral.season-vacation { background: var(--season); border-color: color-mix(in srgb, var(--season), #000 8%); }
+html.dark .day-cell.neutral.season-school, html.dark .day-cell.neutral.season-vacation {
+  background: color-mix(in srgb, var(--season) 20%, #231535) !important; border-color: color-mix(in srgb, var(--season) 65%, #2d1a4a) !important;
+}
+.day-cell.season-school:not(.neutral):not(.empty), .day-cell.season-vacation:not(.neutral):not(.empty) {
+  box-shadow: inset 0 -5px 0 color-mix(in srgb, var(--season), #000 18%);
+}
+.season-legend { display: flex; gap: 12px; align-items: center; margin-left: 6px; }
+.season-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--text-m); }
+.season-chip i { width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(0,0,0,.12); display: inline-block; }
+
+/* School-year window and settings */
+#modal-school .modal-box { width: min(720px, calc(100vw - 40px)); max-width: none; }
+.school-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 4px; }
+.school-dates label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--text-m); }
+#school-body input[type="checkbox"] { width: auto; margin: 0; flex: none; }
+#school-body .pat-check { flex-direction: row; }
+.school-periods { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 8px; }
+.school-row { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 6px; align-items: center; }
+.school-row input { margin: 0; }
+.school-row input[type="date"] { width: auto; font-size: 12px; padding: 4px 6px; }
+.school-del { padding: 4px 9px; }
+.school-error { color: #dc2626; font-size: 12px; font-weight: 800; min-height: 16px; margin-top: 6px; }
+#modal-school .modal-foot .school-never { margin-right: auto; }
+.set-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 6px 0; }
+.set-check input { width: auto; margin: 0; flex: none; }
+.set-colors { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 10px 0 4px; }
+.set-colors label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.set-colors input[type="color"] { width: 34px; height: 26px; padding: 0; border: none; background: none; margin: 0; flex: none; }
+#patron-other input { flex: 1; min-width: 120px; margin: 0; }
+#patron-other.hidden, #modal-school .modal-foot .hidden { display: none; }
+
+/* PDF of several months */
+.export-range-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.export-range-row.hidden, .export-custom.hidden { display: none; }
+#export-range { width: auto; margin: 0; font-size: 13px; }
+.export-custom { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.export-custom input[type="month"] { width: auto; margin: 0; font-size: 12px; padding: 4px 6px; }
+.export-pages { font-size: 12px; font-weight: 800; color: var(--text-m); min-height: 16px; }

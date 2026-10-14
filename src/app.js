@@ -86,12 +86,60 @@ const App = (() => {
     let _expLandscape = false;
     let _expCentered  = true; // default: centra
 
+    // Months to export: this month, a few months, a school year or a calendar year (one page each).
+    let _expRange = 'month';
+    const ym = (y, m) => `${y}-${String(m + 1).padStart(2, '0')}`;
+    const parseYm = (v) => { const r = /^(\d{4})-(\d{2})$/.exec(v || ''); return r ? { y: +r[1], m: +r[2] - 1 } : null; };
+
+    function exportMonths() {
+      let from = { y: year, m: month }, count = 1;
+      if (_expRange === 'next3') count = 3;
+      else if (_expRange === 'school') { from = { y: SchoolUtils.schoolYearOf(year, month), m: 8 }; count = 10; }
+      else if (_expRange === 'year') { from = { y: year, m: 0 }; count = 12; }
+      else if (_expRange === 'custom') {
+        const a = parseYm(document.getElementById('export-from').value), b = parseYm(document.getElementById('export-to').value);
+        if (a && b) {
+          const n = (b.y - a.y) * 12 + (b.m - a.m) + 1;
+          if (n >= 1) { from = a; count = Math.min(n, 24); }
+        }
+      }
+      return Array.from({ length: count }, (_, i) => { const t = new Date(from.y, from.m + i, 1); return { y: t.getFullYear(), m: t.getMonth() }; });
+    }
+
+    // Saved calendar of a month: the one on screen, else the only one (or the first) of that month.
+    async function calendarDataFor(y, m) {
+      if (calKey && year === y && month === m) return { key: calKey, data: await Storage.load(calKey) };
+      const c = _calIndex.find(x => x.year === y && x.month === m);
+      return c ? { key: c.key, data: await Storage.load(c.key) } : { key: null, data: null };
+    }
+
+    // One HTML document with one page per month (each month's page comes from CalView.buildPrintHTML).
     async function buildExportHTML() {
       if (view === 'weekly') {
         return WeekView.buildPrintHTML(_expLandscape, _expCentered);
       }
-      const saved = calKey ? await Storage.load(calKey) : null;
-      return CalView.buildPrintHTML(saved?.year ?? year, saved?.month ?? month, calKey, saved, _expLandscape, _expCentered);
+      const months = exportMonths();
+      const docs = [];
+      for (const { y, m } of months) {
+        const { key, data } = await calendarDataFor(y, m);
+        docs.push(CalView.buildPrintHTML(y, m, key, data, _expLandscape, _expCentered));
+      }
+      if (docs.length === 1) return docs[0];
+      const head = docs[0].slice(0, docs[0].indexOf('</head>'));
+      const bodies = docs.map(d => d.slice(d.indexOf('<body>') + 6, d.lastIndexOf('</body>')));
+      return `${head}<style>body{height:auto !important}.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head><body>${bodies.join('')}</body></html>`;
+    }
+
+    function renderRangeOptions() {
+      const sel = document.getElementById('export-range');
+      const sy = SchoolUtils.schoolYearOf(year, month);
+      const opts = [
+        ['month', I18n.t('exportThisMonth')], ['next3', I18n.t('exportNext3')],
+        ['school', I18n.tf('exportSchoolYear', sy)], ['year', I18n.tf('exportYear', year)], ['custom', I18n.t('exportCustom')],
+      ];
+      sel.innerHTML = opts.map(([v, l]) => `<option value="${v}" ${v === _expRange ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+      document.getElementById('export-range-row').classList.toggle('hidden', view === 'weekly');
+      document.getElementById('export-custom').classList.toggle('hidden', _expRange !== 'custom');
     }
 
     const canExport = () => true;
@@ -118,6 +166,8 @@ const App = (() => {
       frame.style.height = `${PH}px`;
       frame.style.transform = `scale(${scale})`;
       frame.srcdoc = html;
+      const pages = view === 'weekly' ? 1 : exportMonths().length;
+      document.getElementById('export-pages').textContent = pages > 1 ? I18n.tf('exportPages', pages) : '';
 
       // Active-mode toggle — orientazione
       document.getElementById('export-btn-portrait').classList.toggle('active-mode',  !_expLandscape);
@@ -132,9 +182,20 @@ const App = (() => {
       if (!canExport()) return;
       _expLandscape = false;
       _expCentered  = true;
+      _expRange     = 'month';
+      document.getElementById('export-from').value = ym(year, month);
+      document.getElementById('export-to').value = ym(year, month);
+      renderRangeOptions();
       document.getElementById('modal-export').classList.remove('hidden');
       await refreshExportPreview();
     });
+
+    document.getElementById('export-range').addEventListener('change', async (e) => {
+      _expRange = e.target.value;
+      document.getElementById('export-custom').classList.toggle('hidden', _expRange !== 'custom');
+      await refreshExportPreview();
+    });
+    ['export-from', 'export-to'].forEach(id => document.getElementById(id).addEventListener('change', refreshExportPreview));
 
     // Orientazione
     document.getElementById('export-btn-portrait').addEventListener('click', async () => {
@@ -161,9 +222,11 @@ const App = (() => {
       if (!canExport()) return;
       const months   = I18n.ta('months');
       const isWeekly = view === 'weekly';
+      const list = exportMonths();
+      const name = ({ y, m }) => `${months[m] || m + 1}_${y}`;
       const filename = isWeekly
         ? WeekView.getExportFilename()
-        : `Calendario_${months[month]||month+1}_${year}`;
+        : list.length === 1 ? `Calendario_${name(list[0])}` : `Calendario_${name(list[0])}-${name(list[list.length - 1])}`;
       const html = await buildExportHTML();
       const res  = await window.api.pdfExport(html, filename, _expLandscape);
       if (res?.ok) document.getElementById('modal-export').classList.add('hidden');
@@ -197,6 +260,7 @@ const App = (() => {
     CalView.initListeners();
     WeekView.initListeners();
     PatternView.initListeners();
+    SchoolView.initListeners();
     initSettingsListeners();
 
     // Load saved calendars
@@ -226,7 +290,9 @@ const App = (() => {
       SettingsManager.set({ lastWhatsNew: appInfo.version });
       await SettingsManager.save();
     }
-    if (steps.length) setTimeout(() => Tour.start(steps), 700);
+    // Then the school-year window (from 1 September, once per school year), after the tour if any.
+    if (steps.length) setTimeout(() => Tour.start(steps, () => SchoolView.maybePrompt()), 700);
+    else setTimeout(() => SchoolView.maybePrompt(), 500);
     window.api.onMenuWhatsNew?.(() => {
       const list = whatsNewLatest(appInfo.version);
       Tour.start(list.length ? list : (WHATS_NEW[WHATS_NEW.length - 1]?.steps || []));

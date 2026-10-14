@@ -38,8 +38,9 @@ function assetUrl(version, fileUrl) {
 
 // Downloads url to dest with progress, verifying the base64 SHA-512 from the release metadata.
 // fetchImpl: Electron's net.fetch (follows GitHub's redirects to its storage).
-async function download(fetchImpl, url, dest, expectedSha512, onProgress) {
-  const res = await fetchImpl(url);
+// signal (optional AbortSignal): Cancel in the update window stops the download.
+async function download(fetchImpl, url, dest, expectedSha512, onProgress, signal) {
+  const res = await fetchImpl(url, signal ? { signal } : undefined);
   if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
   const total = Number(res.headers.get('content-length')) || 0;
   const hash  = crypto.createHash('sha512');
@@ -48,6 +49,7 @@ async function download(fetchImpl, url, dest, expectedSha512, onProgress) {
   try {
     const reader = res.body.getReader();
     for (;;) {
+      if (signal && signal.aborted) { reader.cancel().catch(() => {}); throw abortError(); }
       const { done, value } = await reader.read();
       if (done) break;
       const buf = Buffer.from(value);
@@ -66,6 +68,8 @@ async function download(fetchImpl, url, dest, expectedSha512, onProgress) {
   }
   return dest;
 }
+
+function abortError() { const e = new Error('download cancelled'); e.code = 'cancelled'; return e; }
 
 function unzip(zipPath, destDir) {
   return new Promise((resolve, reject) => {
@@ -154,7 +158,7 @@ function cleanup({ execPath, workRoot }) {
 
 // Full flow up to the point where the app must quit. Returns a function that starts the swap
 // script; the caller runs it and then quits the app.
-async function prepareUpdate({ fetchImpl, info, arch, execPath, workRoot, onProgress }) {
+async function prepareUpdate({ fetchImpl, info, arch, execPath, workRoot, onProgress, signal }) {
   const bundle  = currentBundlePath(execPath);
   const blocker = selfInstallBlocker(bundle);
   if (blocker) { const e = new Error(`cannot self-install: ${blocker}`); e.code = blocker; throw e; }
@@ -167,7 +171,8 @@ async function prepareUpdate({ fetchImpl, info, arch, execPath, workRoot, onProg
   const workDir = fs.mkdtempSync(path.join(workRoot, 'work-'));
   try {
     const zipPath = path.join(workDir, 'update.zip');
-    await download(fetchImpl, assetUrl(info.version, file.url), zipPath, file.sha512, onProgress);
+    await download(fetchImpl, assetUrl(info.version, file.url), zipPath, file.sha512, onProgress, signal);
+    if (signal && signal.aborted) throw abortError();
 
     const unpackDir = path.join(workDir, 'app');
     fs.mkdirSync(unpackDir);
