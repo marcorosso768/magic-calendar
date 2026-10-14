@@ -2,6 +2,15 @@
 const $ = (id) => document.getElementById(id);
 let _lastHeight = 0;
 
+// The window takes the height of its content: asked again whenever the layout changes (new state,
+// fonts loaded, text wrapping), but only when the height really changes.
+function reportHeight() {
+  const h = Math.ceil(document.querySelector('.panel').getBoundingClientRect().height
+    + parseFloat(getComputedStyle(document.body).paddingTop) + parseFloat(getComputedStyle(document.body).paddingBottom));
+  if (h !== _lastHeight) { _lastHeight = h; window.panel.resize(h); }
+}
+new ResizeObserver(() => reportHeight()).observe(document.querySelector('.panel'));
+
 function render(s) {
   $('title').textContent = s.title || '';
   $('message').textContent = s.message || '';
@@ -29,11 +38,7 @@ function render(s) {
     const primary = box.querySelector('.primary');
     if (primary) primary.focus();
   }
-  // Ask for a new height only when it changes (not at every progress update).
-  requestAnimationFrame(() => {
-    const h = document.body.scrollHeight;
-    if (h !== _lastHeight) { _lastHeight = h; window.panel.resize(h); }
-  });
+  reportHeight();
 }
 
 document.addEventListener('keydown', (e) => {

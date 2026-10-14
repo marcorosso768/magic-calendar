@@ -360,7 +360,7 @@ function createPanel(file, opts) {
   return win;
 }
 
-const UPDATE_W = 500;
+const UPDATE_W = 660;
 
 function openUpdateWindow() {
   if (updateWin && !updateWin.isDestroyed()) { updateWin.show(); updateWin.focus(); return; }
@@ -434,7 +434,7 @@ ipcMain.on('panel:action', (e, id) => {
 ipcMain.on('panel:resize', (e, height) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (!win || win !== updateWin) return;
-  const h = Math.max(110, Math.min(620, Math.round(Number(height) || 0)));
+  const h = Math.max(110, Math.min(700, Math.round(Number(height) || 0)));
   const [w, cur] = win.getContentSize();
   if (h !== cur) win.setContentSize(w, h);   // resizing at every progress step made the window shake
 });
