@@ -126,6 +126,7 @@ const SettingsManager = (() => {
     if (!s.types || !s.types.length) s.types = defaults.types;
     s.school = { ...defaults.school, ...(s.school || {}) };
     s.school.colors = { ...SchoolUtils.DEFAULT_COLORS, ...(s.school.colors || {}) };
+    s.patron = SchoolUtils.fixPatron(s.patron);
 
     // 5. Auto-traduce subtitle/footer/types se ancora ai valori default
     translateDefaultTexts(I18n.currentLang());

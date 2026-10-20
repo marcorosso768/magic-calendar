@@ -51,3 +51,15 @@ test('when to ask for the school year', () => {
   assert.equal(S.needsYearPrompt({ dismissed: { 2026: true } }, new Date(2026, 9, 14)), null);
   assert.equal(S.needsYearPrompt({ enabled: false }, new Date(2026, 9, 14)), null);
 });
+
+test('patron list: corrected entries and saved choices', () => {
+  const bari = S.PATRONS.find(p => p.city === 'Bari'), ve = S.PATRONS.find(p => p.city === 'Venezia');
+  assert.deepEqual([bari.month, bari.day], [4, 8]);
+  assert.deepEqual([ve.month, ve.day, ve.name], [10, 21, 'Madonna della Salute']);
+  assert.deepEqual(S.fixPatron({ city: 'Bari', month: 11, day: 6, name: 'San Nicola' }), bari);
+  const own = { city: 'Bari', month: 11, day: 6, name: 'mio' };   // same date typed by hand under "Other": also moved
+  assert.equal(S.fixPatron(own).month, 4);
+  assert.deepEqual(S.fixPatron({ city: 'Milano', month: 11, day: 7 }), { city: 'Milano', month: 11, day: 7 });
+  assert.equal(S.fixPatron(null), null);
+  assert.equal(new Set(S.PATRONS.map(p => p.city)).size, S.PATRONS.length);
+});

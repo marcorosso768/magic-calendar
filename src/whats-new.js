@@ -79,6 +79,19 @@ const WHATS_NEW = [
       },
     ],
   },
+  {
+    version: '1.6.0',
+    steps: [
+      {
+        target: '#btn-ics',
+        title: { it: 'I giorni anche sul telefono', en: 'Your days on your phone too' },
+        text: {
+          it: 'Esporta i giorni, le vacanze scolastiche e, se vuoi, le festività in un file da aprire in Calendario di Apple, Google Calendar o Outlook. Dopo una modifica esporta di nuovo: gli eventi già importati vengono aggiornati, non duplicati.',
+          en: 'Export your days, the school holidays and, if you like, public holidays to a file for Apple Calendar, Google Calendar or Outlook. After a change, export again: events already imported are updated, not duplicated.',
+        },
+      },
+    ],
+  },
 ];
 
 // "1.10.0" > "1.9.2"

@@ -1153,3 +1153,12 @@ html.dark .day-cell.neutral.season-school, html.dark .day-cell.neutral.season-va
 .export-custom { display: flex; gap: 6px; align-items: center; font-size: 13px; }
 .export-custom input[type="month"] { width: auto; margin: 0; font-size: 12px; padding: 4px 6px; }
 .export-pages { font-size: 12px; font-weight: 800; color: var(--text-m); min-height: 16px; }
+
+/* Calendar export (.ics) */
+#btn-ics { margin-bottom: 8px; }
+#ics-body select { width: 100%; }
+#ics-body .export-custom { margin-top: 6px; }
+#ics-body .ics-open { margin-top: 12px; }
+#ics-body .export-pages { margin-top: 10px; }
+#modal-ics .modal-box { width: min(460px, calc(100vw - 40px)); }
+#ics-body .export-custom input[type="month"] { width: auto; }

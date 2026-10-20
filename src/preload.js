@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // PDF
   pdfExport: (html, name, landscape) => ipcRenderer.invoke('pdf:export', { html, filename: name, landscape }),
+  icsExport: (text, name, open) => ipcRenderer.invoke('ics:export', { text, filename: name, open }),
 
   // Shell (URL scheme validated in main)
   openLink:  (url)   => ipcRenderer.invoke('shell:open', url),

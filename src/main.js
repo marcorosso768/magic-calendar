@@ -235,7 +235,7 @@ const MAIN_STRINGS = {
     manualDetail: 'Scarica la nuova versione dalla pagina delle release e sostituisci l’app in Applicazioni.',
     manualDetailDmg: 'L’app è aperta dall’immagine disco o da una cartella temporanea: spostala in Applicazioni per ricevere gli aggiornamenti automatici. Intanto puoi scaricare la nuova versione dalla pagina delle release.',
     openReleases: 'Apri la pagina delle release', close: 'Chiudi',
-    savePdf: 'Salva PDF', chooseImage: 'Scegli un’immagine', images: 'Immagini',
+    saveIcs: 'Esporta per Calendario', savePdf: 'Salva PDF', chooseImage: 'Scegli un’immagine', images: 'Immagini',
     menuWhatsNew: 'Novità di questa versione', menuEdit: 'Modifica', menuAbout: 'Informazioni su Magic Calendar', menuUndo: 'Annulla', menuRedo: 'Ripristina',
     updChecking: 'Ricerca aggiornamenti…', updUpToDate: 'Sei aggiornato!',
     updUpToDateMsg: (v) => `Magic Calendar ${v} è la versione più recente.`,
@@ -273,7 +273,7 @@ const MAIN_STRINGS = {
     manualDetail: 'Download the new version from the releases page and replace the app in Applications.',
     manualDetailDmg: 'The app is running from the disk image or a temporary folder: move it to Applications to get automatic updates. Meanwhile you can download the new version from the releases page.',
     openReleases: 'Open Releases Page', close: 'Close',
-    savePdf: 'Save PDF', chooseImage: 'Choose an image', images: 'Images',
+    saveIcs: 'Export for Calendar', savePdf: 'Save PDF', chooseImage: 'Choose an image', images: 'Images',
     menuWhatsNew: 'What’s New in This Version', menuEdit: 'Edit', menuAbout: 'About Magic Calendar', menuUndo: 'Undo', menuRedo: 'Redo',
     updChecking: 'Checking for updates…', updUpToDate: 'You’re up to date!',
     updUpToDateMsg: (v) => `Magic Calendar ${v} is the newest version available.`,
@@ -1000,6 +1000,29 @@ async function importBackupInteractive() {
 
 ipcMain.handle('backup:export', () => exportBackupInteractive());
 ipcMain.handle('backup:import', () => importBackupInteractive());
+
+// ──────────────────────────────────────────────────────────────
+// Calendar export (.ics): the renderer builds the text (ics.js); here it is saved and, if asked,
+// opened with the default calendar app (Apple Calendar asks which calendar to add the events to).
+// ──────────────────────────────────────────────────────────────
+ipcMain.handle('ics:export', async (_, { text, filename, open }) => {
+  const safe = String(filename || 'Magic Calendar').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 120);
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: T('saveIcs'),
+    defaultPath: path.join(app.getPath('downloads'), `${safe}.ics`),
+    filters: [{ name: 'iCalendar', extensions: ['ics'] }]
+  });
+  if (result.canceled || !result.filePath) return { ok: false };
+  try {
+    fs.writeFileSync(result.filePath, String(text), 'utf8');
+    if (open) shell.openPath(result.filePath);
+    else shell.showItemInFolder(result.filePath);
+    return { ok: true, path: result.filePath };
+  } catch (err) {
+    console.warn('[ics:export] failed:', err);
+    return { ok: false, error: err && err.message ? err.message : String(err) };
+  }
+});
 
 // ──────────────────────────────────────────────────────────────
 // PDF export

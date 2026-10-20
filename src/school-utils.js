@@ -18,7 +18,7 @@ const SchoolUtils = (() => {
   const PATRONS = [
     { city: 'Ancona',          month: 4,  day: 4,  name: 'San Ciriaco' },
     { city: 'Aosta',           month: 8,  day: 7,  name: 'San Grato' },
-    { city: 'Bari',            month: 11, day: 6,  name: 'San Nicola' },
+    { city: 'Bari',            month: 4,  day: 8,  name: 'San Nicola' },              // 8 May (6 Dec is not a day off)
     { city: 'Bergamo',         month: 7,  day: 26, name: 'Sant’Alessandro' },
     { city: 'Bologna',         month: 9,  day: 4,  name: 'San Petronio' },
     { city: 'Brescia',         month: 1,  day: 15, name: 'Santi Faustino e Giovita' },
@@ -55,10 +55,21 @@ const SchoolUtils = (() => {
     { city: 'Treviso',         month: 3,  day: 27, name: 'San Liberale' },
     { city: 'Trieste',         month: 10, day: 3,  name: 'San Giusto' },
     { city: 'Udine',           month: 6,  day: 12, name: 'Santi Ermacora e Fortunato' },
-    { city: 'Venezia',         month: 3,  day: 25, name: 'San Marco' },
+    { city: 'Venezia',         month: 10, day: 21, name: 'Madonna della Salute' },    // San Marco falls on 25 April
     { city: 'Verona',          month: 4,  day: 21, name: 'San Zeno' },
     { city: 'Vicenza',         month: 8,  day: 8,  name: 'Madonna di Monte Berico' },
   ];
+
+  // Entries corrected in 1.6.0: a saved choice with the old date is moved to the right one.
+  const PATRON_FIXES = [
+    { city: 'Bari', month: 11, day: 6 },
+    { city: 'Venezia', month: 3, day: 25 },
+  ];
+  function fixPatron(p) {
+    if (!p || !PATRON_FIXES.some(f => f.city === p.city && f.month === p.month && f.day === p.day)) return p;
+    const cur = PATRONS.find(x => x.city === p.city);
+    return cur ? { ...cur } : p;
+  }
 
   // ── Dates ────────────────────────────────────────────────────────
   const pad = (n) => String(n).padStart(2, '0');
@@ -183,7 +194,7 @@ const SchoolUtils = (() => {
     return Number.isFinite(a) && Number.isFinite(b) && a <= b;
   }
 
-  return { DEFAULT_COLORS, PATRONS, iso, parse, isoStamp, schoolYearOf, patronFor, isHoliday, isBridge,
+  return { DEFAULT_COLORS, PATRONS, fixPatron, iso, parse, isoStamp, schoolYearOf, patronFor, isHoliday, isBridge,
            seasonFor, suggestYear, needsYearPrompt, validPeriod };
 })();
 

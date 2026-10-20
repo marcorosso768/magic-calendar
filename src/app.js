@@ -91,13 +91,14 @@ const App = (() => {
     const ym = (y, m) => `${y}-${String(m + 1).padStart(2, '0')}`;
     const parseYm = (v) => { const r = /^(\d{4})-(\d{2})$/.exec(v || ''); return r ? { y: +r[1], m: +r[2] - 1 } : null; };
 
-    function exportMonths() {
+    // range: 'month' | 'next3' | 'school' | 'year' | 'custom' (then the two <input type="month">).
+    function monthsFor(range, fromId, toId) {
       let from = { y: year, m: month }, count = 1;
-      if (_expRange === 'next3') count = 3;
-      else if (_expRange === 'school') { from = { y: SchoolUtils.schoolYearOf(year, month), m: 8 }; count = 10; }
-      else if (_expRange === 'year') { from = { y: year, m: 0 }; count = 12; }
-      else if (_expRange === 'custom') {
-        const a = parseYm(document.getElementById('export-from').value), b = parseYm(document.getElementById('export-to').value);
+      if (range === 'next3') count = 3;
+      else if (range === 'school') { from = { y: SchoolUtils.schoolYearOf(year, month), m: 8 }; count = 10; }
+      else if (range === 'year') { from = { y: year, m: 0 }; count = 12; }
+      else if (range === 'custom') {
+        const a = parseYm(document.getElementById(fromId).value), b = parseYm(document.getElementById(toId).value);
         if (a && b) {
           const n = (b.y - a.y) * 12 + (b.m - a.m) + 1;
           if (n >= 1) { from = a; count = Math.min(n, 24); }
@@ -105,6 +106,7 @@ const App = (() => {
       }
       return Array.from({ length: count }, (_, i) => { const t = new Date(from.y, from.m + i, 1); return { y: t.getFullYear(), m: t.getMonth() }; });
     }
+    const exportMonths = () => monthsFor(_expRange, 'export-from', 'export-to');
 
     // Saved calendar of a month: the one on screen, else the only one (or the first) of that month.
     async function calendarDataFor(y, m) {
@@ -130,14 +132,17 @@ const App = (() => {
       return `${head}<style>body{height:auto !important}.page{break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}</style></head><body>${bodies.join('')}</body></html>`;
     }
 
-    function renderRangeOptions() {
-      const sel = document.getElementById('export-range');
+    function rangeOptionsHtml(selected) {
       const sy = SchoolUtils.schoolYearOf(year, month);
       const opts = [
         ['month', I18n.t('exportThisMonth')], ['next3', I18n.t('exportNext3')],
         ['school', I18n.tf('exportSchoolYear', sy)], ['year', I18n.tf('exportYear', year)], ['custom', I18n.t('exportCustom')],
       ];
-      sel.innerHTML = opts.map(([v, l]) => `<option value="${v}" ${v === _expRange ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+      return opts.map(([v, l]) => `<option value="${v}" ${v === selected ? 'selected' : ''}>${escapeHtml(l)}</option>`).join('');
+    }
+
+    function renderRangeOptions() {
+      document.getElementById('export-range').innerHTML = rangeOptionsHtml(_expRange);
       document.getElementById('export-range-row').classList.toggle('hidden', view === 'weekly');
       document.getElementById('export-custom').classList.toggle('hidden', _expRange !== 'custom');
     }
@@ -196,6 +201,60 @@ const App = (() => {
       await refreshExportPreview();
     });
     ['export-from', 'export-to'].forEach(id => document.getElementById(id).addEventListener('change', refreshExportPreview));
+
+    // ── Calendar export (.ics) ───────────────────────────────────────
+    let _icsRange = 'school';
+    async function buildIcs() {
+      const months = monthsFor(_icsRange, 'ics-from', 'ics-to');
+      const withDays = [];
+      for (const { y, m } of months) {
+        // Every saved calendar of that month (normally one).
+        const cals = _calIndex.filter(c => c.year === y && c.month === m);
+        const days = {};
+        for (const c of cals) Object.assign(days, ((await Storage.load(c.key)) || {}).days || {});
+        withDays.push({ y, m, days });
+      }
+      const s = SettingsManager.get();
+      const events = Ics.collect(withDays, s, {
+        days: document.getElementById('ics-days').checked,
+        school: document.getElementById('ics-school').checked,
+        holidays: document.getElementById('ics-holidays').checked,
+        lang: I18n.currentLang(),
+        labels: { schoolStart: I18n.t('icsSchoolStart'), schoolEnd: I18n.t('icsSchoolEnd'), bridge: I18n.t('bridgeName'), vacation: I18n.t('legendVacation') },
+      });
+      const calName = s.subtitle || I18n.t('defaultSubtitle');
+      return { events, text: Ics.build({ calName, events }), months };
+    }
+    async function refreshIcsCount() {
+      const { events } = await buildIcs();
+      document.getElementById('ics-count').textContent = events.length ? I18n.tf('icsCount', events.length) : I18n.t('icsNone');
+      document.getElementById('btn-ics-save').disabled = !events.length;
+    }
+    document.getElementById('btn-ics').addEventListener('click', async () => {
+      _icsRange = 'school';
+      document.getElementById('ics-range').innerHTML = rangeOptionsHtml(_icsRange);
+      document.getElementById('ics-from').value = ym(year, month);
+      document.getElementById('ics-to').value = ym(year, month);
+      document.getElementById('ics-custom').classList.add('hidden');
+      document.getElementById('modal-ics').classList.remove('hidden');
+      await refreshIcsCount();
+    });
+    document.getElementById('ics-range').addEventListener('change', async (e) => {
+      _icsRange = e.target.value;
+      document.getElementById('ics-custom').classList.toggle('hidden', _icsRange !== 'custom');
+      await refreshIcsCount();
+    });
+    ['ics-from', 'ics-to', 'ics-days', 'ics-school', 'ics-holidays'].forEach(id =>
+      document.getElementById(id).addEventListener('change', refreshIcsCount));
+    document.getElementById('btn-ics-save').addEventListener('click', async () => {
+      const { text, months } = await buildIcs();
+      const MN = I18n.ta('months');
+      const name = ({ y, m }) => `${MN[m] || m + 1}_${y}`;
+      const first = months[0], last = months[months.length - 1];
+      const filename = months.length === 1 ? `Magic_Calendar_${name(first)}` : `Magic_Calendar_${name(first)}-${name(last)}`;
+      const res = await window.api.icsExport(text, filename, document.getElementById('ics-open').checked);
+      if (res?.ok) document.getElementById('modal-ics').classList.add('hidden');
+    });
 
     // Orientazione
     document.getElementById('export-btn-portrait').addEventListener('click', async () => {

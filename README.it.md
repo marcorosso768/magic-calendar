@@ -53,6 +53,7 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Supporto italiano / inglese
 - Salvataggio automatico
 - Esportazione PDF, anche di più mesi o dell’anno intero
+- Esportazione per Calendario di Apple / Google Calendar (.ics)
 - Calendari multipli
 - Oggi evidenziato, giorni passati attenuati, festività italiane
 - Conteggio dei giorni e conto alla rovescia al prossimo giorno di ogni tipo
