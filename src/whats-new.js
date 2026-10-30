@@ -92,6 +92,19 @@ const WHATS_NEW = [
       },
     ],
   },
+  {
+    version: '1.7.0',
+    steps: [
+      {
+        target: null,
+        title: { it: 'Calendario scolastico da file', en: 'School calendar from a file' },
+        text: {
+          it: 'Se la scuola o la regione pubblica il calendario in formato .ics, importalo nella finestra dell’anno scolastico (Impostazioni → Scuola e vacanze → Anno scolastico e vacanze… → 📥 Importa da file .ics): prende inizio e fine delle lezioni e ti fa scegliere quali periodi diventano vacanze.',
+          en: 'If your school or region publishes its calendar as an .ics file, import it in the school-year window (Settings → School and holidays → School year and holidays… → 📥 Import from .ics file): it takes the first and last day of lessons and lets you choose which periods become holidays.',
+        },
+      },
+    ],
+  },
 ];
 
 // "1.10.0" > "1.9.2"

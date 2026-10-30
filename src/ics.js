@@ -130,7 +130,87 @@ const Ics = (() => {
       .sort((a, b) => CU.stamp(a.start.y, a.start.m, a.start.d) - CU.stamp(b.start.y, b.start.m, b.start.d));
   }
 
-  return { build, collect, esc, fold };
+  // ── Import ───────────────────────────────────────────────────────
+  // Reads the events of an .ics file: [{ uid, summary, from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }]
+  // (to is inclusive). All-day and timed events, any time zone: only the date is used.
+  // Recurring events (RRULE) are taken at their first date only.
+  function unesc(s) {
+    return String(s || '').replace(/\\n/gi, ' ').replace(/\\([,;\\])/g, '$1').replace(/\s+/g, ' ').trim();
+  }
+  function parseDate(v) {
+    const r = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?/.exec(String(v || '').trim());
+    if (!r) return null;
+    let d = new Date(+r[1], +r[2] - 1, +r[3]);
+    if (r[4] != null && r[7]) {                     // UTC time: the local date may differ
+      const u = new Date(Date.UTC(+r[1], +r[2] - 1, +r[3], +r[4], +r[5], +(r[6] || 0)));
+      d = new Date(u.getFullYear(), u.getMonth(), u.getDate());
+    }
+    return { date: d, timed: r[4] != null, midnight: r[4] != null && +r[4] === 0 && +r[5] === 0 };
+  }
+  const isoOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  function parse(text) {
+    const lines = String(text || '').replace(/\r\n?/g, '\n').replace(/\n[ \t]/g, '').split('\n');
+    const out = [];
+    let ev = null, depth = 0;
+    for (const line of lines) {
+      if (/^BEGIN:VEVENT$/i.test(line)) { ev = {}; depth = 0; continue; }
+      if (!ev) continue;
+      if (/^BEGIN:/i.test(line)) { depth++; continue; }   // VALARM inside the event
+      if (/^END:VEVENT$/i.test(line)) {
+        const a = parseDate(ev.DTSTART);
+        if (a) {
+          let to = a.date;
+          const b = parseDate(ev.DTEND);
+          if (b) {
+            to = b.date;
+            // DTEND is exclusive for all-day events, and for timed events ending at midnight.
+            if (!b.timed || (b.midnight && to > a.date)) to = new Date(to.getFullYear(), to.getMonth(), to.getDate() - 1);
+            if (to < a.date) to = a.date;
+          } else if (ev.DURATION) {
+            const m = /P(?:(\d+)W)?(?:(\d+)D)?/i.exec(ev.DURATION);
+            const days = m ? (+(m[1] || 0)) * 7 + (+(m[2] || 0)) : 0;
+            if (days > 1) to = new Date(a.date.getFullYear(), a.date.getMonth(), a.date.getDate() + days - 1);
+          }
+          out.push({ uid: ev.UID || '', summary: unesc(ev.SUMMARY) || '', from: isoOf(a.date), to: isoOf(to) });
+        }
+        ev = null; continue;
+      }
+      if (depth > 0) { if (/^END:/i.test(line)) depth--; continue; }
+      const i = line.indexOf(':');
+      if (i < 0) continue;
+      const name = line.slice(0, i).split(';')[0].toUpperCase();
+      if (['DTSTART', 'DTEND', 'SUMMARY', 'UID', 'DURATION'].includes(name) && ev[name] == null) ev[name] = line.slice(i + 1);
+    }
+    return out.sort((x, y) => x.from.localeCompare(y.from) || x.to.localeCompare(y.to));
+  }
+
+  // Sorts the events of a school calendar for the school year Y (1 September Y → 31 August Y+1):
+  //   start / end: first and last day of lessons, if an event says so;
+  //   periods: holidays and days without lessons, with `suggested` = likely a day off.
+  const RX_START = /(inizio|apertura|avvio|primo giorno).{0,25}(lezion|attivit|scuol|anno scolastico)|first day of (school|classes|term)|school (starts|begins)/i;
+  const RX_END = /(fine|termine|chiusura|ultimo giorno|conclusione).{0,25}(lezion|attivit|scuol|anno scolastico)|last day of (school|classes|term)|school ends/i;
+  const RX_OFF = /vacanz|festiv|festa|sospension|chius|ponte|natal|pasqu|carneval|patron|ognissant|immacolat|epifani|liberazion|repubblica|lavoratori|holiday|break|vacation|no school|closed/i;
+
+  function schoolFromEvents(events, Y) {
+    const lo = `${Y}-09-01`, hi = `${Y + 1}-08-31`;
+    const inYear = events.filter(e => e.to >= lo && e.from <= hi);
+    let start = null, end = null;
+    const periods = [];
+    const seen = new Set();
+    for (const e of inYear) {
+      if (!start && RX_START.test(e.summary)) { start = e.from; continue; }
+      if (RX_END.test(e.summary)) { end = e.to; continue; }
+      const key = `${e.from}|${e.to}|${e.summary.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const multi = e.to > e.from;
+      periods.push({ name: e.summary, from: e.from < lo ? lo : e.from, to: e.to > hi ? hi : e.to, suggested: RX_OFF.test(e.summary) || (multi && !RX_START.test(e.summary)) });
+    }
+    return { start, end, periods };
+  }
+
+  return { build, collect, esc, fold, parse, schoolFromEvents };
 })();
 
 if (typeof module !== 'undefined') module.exports = Ics;

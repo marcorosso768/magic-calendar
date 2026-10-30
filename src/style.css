@@ -1162,3 +1162,14 @@ html.dark .day-cell.neutral.season-school, html.dark .day-cell.neutral.season-va
 #ics-body .export-pages { margin-top: 10px; }
 #modal-ics .modal-box { width: min(460px, calc(100vw - 40px)); }
 #ics-body .export-custom input[type="month"] { width: auto; }
+
+/* Import of a school calendar (.ics) */
+.school-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#modal-ics-import .modal-box { width: min(640px, calc(100vw - 40px)); max-width: none; }
+.ics-imp-tools { display: flex; gap: 6px; margin: 6px 0; }
+.ics-imp-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px; }
+.ics-imp-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 5px 6px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.ics-imp-row:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.ics-imp-row input { width: auto; margin: 0; }
+.ics-imp-name { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ics-imp-when { font-size: 12px; color: var(--text-m); white-space: nowrap; font-variant-numeric: tabular-nums; }

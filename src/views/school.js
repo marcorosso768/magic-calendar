@@ -6,6 +6,7 @@ const SchoolView = (() => {
   let _year = null;      // school year being edited (named by the year it starts in)
   let _auto = false;     // opened by itself: "Later" and "Don't use" are offered
   let _rows = [];        // periods shown in the window: { id, name, from, to }
+  let _presets = new Map();   // suggested periods (id → original values): an import replaces them if untouched
 
   const newId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const PRESET_NAMES = { christmas: 'periodChristmas', carnival: 'periodCarnival', easter: 'periodEaster' };
@@ -23,8 +24,10 @@ const SchoolView = (() => {
     const sug = SchoolUtils.suggestYear(Y);
     const yearData = saved || sug;
     _rows = (sc.periods || []).filter(p => inYear(p, Y)).map(p => ({ ...p }));
+    _presets = new Map();
     if (!saved && !_rows.length) {
       _rows = sug.periods.map(p => ({ id: newId(), name: I18n.t(PRESET_NAMES[p.key]), from: p.from, to: p.to }));
+      _rows.forEach(r => _presets.set(r.id, `${r.name}|${r.from}|${r.to}`));
     }
     document.getElementById('school-title').textContent = I18n.tf('schoolPromptTitle', Y);
     document.getElementById('school-body').innerHTML = `
@@ -37,7 +40,10 @@ const SchoolView = (() => {
       <div class="field-label">${escapeHtml(I18n.t('schoolPeriods'))}</div>
       <p class="hint">${escapeHtml(I18n.t('schoolPeriodsHint'))}</p>
       <div id="school-periods" class="school-periods"></div>
-      <button id="school-add" class="btn-sm">${escapeHtml(I18n.t('periodAdd'))}</button>
+      <div class="school-actions">
+        <button id="school-add" class="btn-sm">${escapeHtml(I18n.t('periodAdd'))}</button>
+        <button id="school-import" class="btn-sm">${escapeHtml(I18n.t('icsImportBtn'))}</button>
+      </div>
       <p id="school-error" class="school-error"></p>
     `;
     renderRows();
@@ -48,6 +54,7 @@ const SchoolView = (() => {
       renderRows();
       document.querySelector('#school-periods .school-row:last-child input[type="text"]')?.focus();
     });
+    document.getElementById('school-import').addEventListener('click', importIcs);
     document.getElementById('school-later').classList.toggle('hidden', !auto);
     document.getElementById('school-never').classList.toggle('hidden', !auto);
     document.getElementById('school-cancel').classList.toggle('hidden', auto);
@@ -79,6 +86,68 @@ const SchoolView = (() => {
       from: el.querySelector('.from').value,
       to: el.querySelector('.to').value,
     }));
+  }
+
+  // ── Import from .ics ─────────────────────────────────────────────
+  let _import = null;   // { start, end, periods } of the file being imported
+  const fmtDate = (iso) => { const p = SchoolUtils.parse(iso); return p ? new Date(p.y, p.m, p.d).toLocaleDateString(I18n.currentLang() === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : iso; };
+
+  async function importIcs() {
+    const res = await window.api.icsOpen();
+    if (!res || !res.ok) {
+      if (res && res.error) document.getElementById('school-error').textContent = I18n.t('icsImportError');
+      return;
+    }
+    const events = Ics.parse(res.text);
+    if (!events.length) { document.getElementById('school-error').textContent = I18n.t('icsImportError'); return; }
+    _import = Ics.schoolFromEvents(events, _year);
+    const n = _import.periods.length + (_import.start ? 1 : 0) + (_import.end ? 1 : 0);
+    const body = document.getElementById('ics-import-body');
+    if (!n) {
+      body.innerHTML = `<p class="hint">${escapeHtml(I18n.t('icsImportNone'))}</p>`;
+    } else {
+      const dates = _import.start && _import.end
+        ? `<label class="set-check"><input type="checkbox" id="ics-imp-dates" checked> ${escapeHtml(I18n.tf('icsImportDates', fmtDate(_import.start), fmtDate(_import.end)))}</label>` : '';
+      body.innerHTML = `
+        <p class="hint"><strong>${escapeHtml(res.name || '')}</strong>: ${escapeHtml(I18n.tf('icsImportFound', n, _year))}</p>
+        ${dates}
+        <p class="hint">${escapeHtml(I18n.t('icsImportHint'))}</p>
+        <div class="ics-imp-tools"><button class="btn-sm" id="ics-imp-all">${escapeHtml(I18n.t('icsImportAll'))}</button><button class="btn-sm" id="ics-imp-none">${escapeHtml(I18n.t('icsImportNoneSel'))}</button></div>
+        <div class="ics-imp-list">${_import.periods.map((p, i) => `
+          <label class="ics-imp-row"><input type="checkbox" data-i="${i}" ${p.suggested ? 'checked' : ''}>
+            <span class="ics-imp-name">${escapeHtml(p.name || '—')}</span>
+            <span class="ics-imp-when">${escapeHtml(p.from === p.to ? fmtDate(p.from) : `${fmtDate(p.from)} → ${fmtDate(p.to)}`)}</span></label>`).join('')}
+        </div>`;
+      const all = (v) => body.querySelectorAll('.ics-imp-list input').forEach(c => { c.checked = v; });
+      document.getElementById('ics-imp-all').addEventListener('click', () => all(true));
+      document.getElementById('ics-imp-none').addEventListener('click', () => all(false));
+    }
+    document.getElementById('ics-import-add').disabled = !n;
+    document.getElementById('modal-ics-import').classList.remove('hidden');
+  }
+
+  function addImported() {
+    if (!_import) return;
+    readRows();
+    const dates = document.getElementById('ics-imp-dates');
+    if (dates && dates.checked) {
+      document.getElementById('school-start').value = _import.start;
+      document.getElementById('school-end').value = _import.end;
+    }
+    // The suggested Christmas/Carnival/Easter rows, if still as proposed, give way to the school's dates.
+    _rows = _rows.filter(r => !(_presets.has(r.id) && _presets.get(r.id) === `${r.name}|${r.from}|${r.to}`));
+    _presets.clear();
+    const have = new Set(_rows.map(r => `${r.from}|${r.to}`));
+    document.querySelectorAll('#ics-import-body .ics-imp-list input:checked').forEach(c => {
+      const p = _import.periods[+c.dataset.i];
+      if (!p || have.has(`${p.from}|${p.to}`)) return;
+      have.add(`${p.from}|${p.to}`);
+      _rows.push({ id: newId(), name: p.name, from: p.from, to: p.to });
+    });
+    _rows.sort((a, b) => a.from.localeCompare(b.from));
+    renderRows();
+    _import = null;
+    document.getElementById('modal-ics-import').classList.add('hidden');
   }
 
   async function persist(patch) {
@@ -127,6 +196,7 @@ const SchoolView = (() => {
     document.getElementById('school-never').addEventListener('click', never);
     document.getElementById('school-later').addEventListener('click', close);   // asks again at the next launch
     document.getElementById('school-cancel').addEventListener('click', close);
+    document.getElementById('ics-import-add').addEventListener('click', addImported);
   }
 
   return { open, maybePrompt, initListeners };

@@ -57,7 +57,7 @@ xattr -dr com.apple.quarantine "/Applications/Magic Calendar.app"
 - Italian / English interface
 - Automatic local saving
 - PDF export, also of several months or a whole year
-- Export to Apple Calendar / Google Calendar (.ics)
+- Export to Apple Calendar / Google Calendar (.ics), import of school calendars (.ics)
 - Multiple calendars
 - Today highlighted, past days dimmed, Italian public holidays
 - Day counts and countdown to the next day of each type
