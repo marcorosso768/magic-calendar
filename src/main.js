@@ -6,6 +6,7 @@ const { pathToFileURL } = require('url');
 const { autoUpdater, CancellationToken } = require('electron-updater');
 const store = require('./fs-store');
 const macUpdater = require('./mac-updater');
+const { parseReleaseNotes } = require('./release-notes');
 
 // Images are referenced as mcimg://local/<file name> and served from userData/images, so stored
 // calendars do not depend on absolute paths (user name, OS, app folder).
@@ -242,6 +243,13 @@ const MAIN_STRINGS = {
     updAvailable: (v) => `È disponibile Magic Calendar ${v}`, updAvailableMsg: (v) => `Hai la versione ${v}. Vuoi installare l’aggiornamento?`,
     updWindowTitle: 'Aggiornamento di Magic Calendar', updBytes: (a, b) => `${a} di ${b}`, updStarting: 'Connessione…',
     updDownloading: (v) => `Scaricamento di Magic Calendar ${v}…`, updReadyMsg: 'Riavvia per completare l’aggiornamento. Se scegli Più tardi, verrà installato alla chiusura dell’app.',
+    updNewTitle: 'È disponibile una nuova versione di Magic Calendar!',
+    updNewMsg: (v, cur) => `Magic Calendar ${v} è disponibile, tu hai la ${cur}. Vuoi scaricarla ora?`,
+    updReadyNewTitle: 'Una nuova versione di Magic Calendar è pronta!',
+    updReadyNewMsg: (v) => `Magic Calendar ${v} è stato scaricato ed è pronto. Vuoi installarlo e riavviare ora?`,
+    updReadyShort: 'Pronto da installare', updNotesLabel: 'Novità:',
+    updAuto: 'Scarica e installa automaticamente gli aggiornamenti in futuro',
+    updRemind: 'Ricordamelo più tardi', updInstallQuit: 'Installa alla chiusura', updInstallRelaunch: 'Installa e riavvia',
     updHistory: 'Storico versioni', updSkip: 'Salta questa versione', updErrorMsg: 'Controlla la connessione e riprova più tardi.',
     aboutVersion: (v) => `Versione ${v}`, aboutProject: 'Il progetto Magic Calendar', aboutSource: 'Codice su GitHub', aboutReleases: 'Tutte le versioni',
     aboutAuthorRole: 'Programmazione, design e manutenzione', aboutBuilt: 'Costruito con', aboutCredits: 'Crediti',
@@ -280,6 +288,13 @@ const MAIN_STRINGS = {
     updAvailable: (v) => `Magic Calendar ${v} is available`, updAvailableMsg: (v) => `You have version ${v}. Install the update?`,
     updWindowTitle: 'Updating Magic Calendar', updBytes: (a, b) => `${a} of ${b}`, updStarting: 'Connecting…',
     updDownloading: (v) => `Downloading Magic Calendar ${v}…`, updReadyMsg: 'Restart to finish updating. If you choose Later, it will be installed when you quit the app.',
+    updNewTitle: 'A new version of Magic Calendar is available!',
+    updNewMsg: (v, cur) => `Magic Calendar ${v} is now available, you have ${cur}. Would you like to download it now?`,
+    updReadyNewTitle: 'A new version of Magic Calendar is ready to install!',
+    updReadyNewMsg: (v) => `Magic Calendar ${v} has been downloaded and is ready to use. Would you like to install it and relaunch now?`,
+    updReadyShort: 'Ready to Install', updNotesLabel: 'Release Notes:',
+    updAuto: 'Automatically download and install updates in the future',
+    updRemind: 'Remind Me Later', updInstallQuit: 'Install on Quit', updInstallRelaunch: 'Install and Relaunch',
     updHistory: 'Version History', updSkip: 'Skip This Version', updErrorMsg: 'Check your connection and try again later.',
     aboutVersion: (v) => `Version ${v}`, aboutProject: 'The Magic Calendar project', aboutSource: 'Source on GitHub', aboutReleases: 'All versions',
     aboutAuthorRole: 'Programmer, designer & maintainer', aboutBuilt: 'Built with', aboutCredits: 'Credits',
@@ -362,9 +377,9 @@ function createPanel(file, opts) {
 
 // Width of the update window: compact for short messages (checking, up to date, downloading, ready),
 // wider only when the release notes and three buttons are shown.
-const UPDATE_W_SMALL = 460, UPDATE_W_WIDE = 520;
+const UPDATE_W_SMALL = 460, UPDATE_W_WIDE = 600;
 function updateWidth(state = _updState) {
-  return state && (state.notes || (state.buttons || []).length > 2) ? UPDATE_W_WIDE : UPDATE_W_SMALL;
+  return state && (state.notes || state.notesBlocks || (state.buttons || []).length > 2) ? UPDATE_W_WIDE : UPDATE_W_SMALL;
 }
 // Changes the width keeping the window centred where it is.
 function setUpdateWidth(w) {
@@ -469,12 +484,29 @@ function stateUpToDate() {
   return { kind: 'uptodate', title: T('updUpToDate'), message: T('updUpToDateMsg', app.getVersion()),
     buttons: [{ id: 'close', label: T('ok'), primary: true }, { id: 'history', label: T('updHistory') }] };
 }
+// The checkbox of the update window: "Automatically download and install updates in the future".
+function autoCheckbox() { return { id: 'auto', label: T('updAuto'), checked: getAutoUpdate() }; }
+
+// Sparkle style (AlDente, LaunchOS): title, message, "Release Notes:" with the formatted notes, the
+// automatic-updates checkbox, then Skip | Remind Me Later | Install Update.
 function stateAvailable(info) {
-  return { kind: 'available', title: T('updAvailable', info.version), message: T('updAvailableMsg', app.getVersion()),
-    notes: releaseNotesText(info),
-    buttons: [{ id: 'install', label: T('install'), primary: true }, { id: 'later', label: T('later') },
+  return { kind: 'available', title: T('updNewTitle'), message: T('updNewMsg', info.version, app.getVersion()),
+    notesLabel: T('updNotesLabel'), notesBlocks: parseReleaseNotes(info.releaseNotes), checkbox: autoCheckbox(),
+    buttons: [{ id: 'install', label: T('install'), primary: true }, { id: 'later', label: T('updRemind') },
       { id: 'skip', label: T('updSkip'), left: true }] };
 }
+
+// Automatic updates (off by default): at launch a new version is downloaded without asking and
+// installed when the app quits; when it is ready the window says so, with the notes.
+function prefsFile() { return path.join(userData, 'update-prefs.json'); }
+function getAutoUpdate() {
+  try { return !!JSON.parse(fs.readFileSync(prefsFile(), 'utf8')).auto; } catch (_) { return false; }
+}
+function setAutoUpdate(on) {
+  try { fs.writeFileSync(prefsFile(), JSON.stringify({ auto: !!on })); } catch (e) { console.warn('[updater] preference not saved:', e.message); }
+  if (_updState && _updState.checkbox) _updState.checkbox.checked = !!on;
+}
+let _bgDownload = false;   // the running download was started by itself (automatic updates)
 
 // "Skip this version": the automatic check at launch stays silent for that version;
 // a manual check (or a newer version) shows it again.
@@ -506,9 +538,17 @@ function sendProgress(version, p) {
   setUpdateState(stateDownloading(version, p), { show: false });
 }
 let _dlAbort = null;   // AbortController (macOS) or CancellationToken (Windows) of the running download
-function stateReady(version) {
-  return { kind: 'ready', title: T('readyMsg', version), message: T('updReadyMsg'),
-    buttons: [{ id: 'restart', label: T('restartNow'), primary: true }, { id: 'later', label: T('later') }] };
+// After a download the user started: compact (LaunchOS), full bar, Install on Quit | Install and Relaunch.
+function stateReady() {
+  return { kind: 'ready', title: T('updReadyShort'), progress: 100,
+    buttons: [{ id: 'restart', label: T('updInstallRelaunch'), primary: true }, { id: 'later', label: T('updInstallQuit') }] };
+}
+// After an automatic download (AlDente): the notes, the checkbox, Skip | Install on Quit | Install and Relaunch.
+function stateReadyFull(info) {
+  return { kind: 'ready', title: T('updReadyNewTitle'), message: T('updReadyNewMsg', info.version),
+    notesLabel: T('updNotesLabel'), notesBlocks: parseReleaseNotes(info.releaseNotes), checkbox: autoCheckbox(),
+    buttons: [{ id: 'restart', label: T('updInstallRelaunch'), primary: true }, { id: 'later', label: T('updInstallQuit') },
+      { id: 'skip', label: T('updSkip'), left: true }] };
 }
 function stateError(detail) {
   return { kind: 'error', title: T('checkFailed'), message: `${T('updErrorMsg')}${detail ? `\n\n${detail}` : ''}`,
@@ -554,6 +594,7 @@ async function checkForUpdatesInteractive(userInitiated) {
     if (result && result.isUpdateAvailable && result.updateInfo) {
       _availableInfo = result.updateInfo;
       if (!userInitiated && getSkippedVersion() === result.updateInfo.version) return;   // skipped by the user
+      if (!userInitiated && getAutoUpdate()) return startUpdate({ background: true });   // no window until it is ready
       setUpdateState(stateAvailable(result.updateInfo));   // also at launch: the window opens
     } else if (userInitiated) {
       setUpdateState(stateUpToDate());
@@ -564,27 +605,10 @@ async function checkForUpdatesInteractive(userInitiated) {
   }
 }
 
-// Release notes come from GitHub as HTML or Markdown: shown as plain text with bullets.
-function releaseNotesText(info) {
-  if (!info.releaseNotes) return '';
-  const notes = Array.isArray(info.releaseNotes)
-    ? info.releaseNotes.map(n => n.note || '').join('\n')
-    : String(info.releaseNotes);
-  return notes
-    .replace(/<\s*li[^>]*>/gi, '• ').replace(/<\s*(br|\/p|\/li|\/h\d)[^>]*>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/^#{1,6}\s*/gm, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1')
-    .replace(/^\s*[-*]\s+/gm, '• ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-async function installMacUpdate(info) {
+async function installMacUpdate(info, { background = false } = {}) {
   // Already downloaded earlier (user chose "Later"): no second download.
   if (!_pendingMacInstaller || _pendingMacVersion !== info.version) {
-    setUpdateState(stateDownloading(info.version));
+    setUpdateState(stateDownloading(info.version), { show: !background });
     const ctrl = new AbortController();
     _dlAbort = { cancel: () => ctrl.abort() };
     try {
@@ -601,6 +625,7 @@ async function installMacUpdate(info) {
     } catch (err) {
       if (ctrl.signal.aborted) return;   // cancelled by the user: the window is already closed
       console.warn('[updater] mac self-install unavailable:', err && err.message);
+      if (background) { _updState = null; return; }   // automatic: stay silent, a manual check shows the problem
       const blocked = err && ['translocated', 'running-from-dmg', 'not-a-bundle'].includes(err.code);
       await offerManualDownload(blocked ? T('manualDetailDmg') : `${T('manualDetail')}\n\n${err && err.message ? err.message : ''}`.trim());
       return;
@@ -608,14 +633,15 @@ async function installMacUpdate(info) {
       _dlAbort = null;
     }
   }
-  setUpdateState(stateReady(info.version));
+  setUpdateState(background ? stateReadyFull(info) : stateReady());
 }
 
-async function startUpdate() {
+async function startUpdate({ background = false } = {}) {
   const info = _availableInfo;
   if (!info) return closeUpdateWindow();
-  if (process.platform === 'darwin') return installMacUpdate(info);
-  setUpdateState(stateDownloading(info.version));
+  _bgDownload = background;
+  if (process.platform === 'darwin') return installMacUpdate(info, { background });
+  setUpdateState(stateDownloading(info.version), { show: !background });
   const token = new CancellationToken();
   _dlAbort = { cancel: () => token.cancel() };
   try {
@@ -623,10 +649,17 @@ async function startUpdate() {
   } catch (err) {
     if (token.cancelled) return;
     console.warn('[updater] downloadUpdate failed:', err);
+    if (background) { _updState = null; return; }
     await offerManualDownload(T('manualDetail'));
   } finally {
     _dlAbort = null;
   }
+}
+
+function discardDownloadedUpdate() {
+  _pendingMacInstaller = null; _pendingMacVersion = null;
+  if (process.platform === 'darwin') { try { macUpdater.cleanup({ execPath: process.execPath, workRoot: updatesDir }); } catch (_) {} }
+  else autoUpdater.autoInstallOnAppQuit = false;
 }
 
 function cancelDownload() {
@@ -649,7 +682,12 @@ function onUpdateAction(id) {
     case 'releases': shell.openExternal(releasePageUrl()); break;
     case 'cancel':   _checkToken++; _updState = null; closeUpdateWindow(); break;
     case 'canceldl': cancelDownload(); break;
-    case 'skip':     if (_availableInfo) setSkippedVersion(_availableInfo.version); _updState = null; closeUpdateWindow(); break;
+    case 'skip':
+      if (_availableInfo) setSkippedVersion(_availableInfo.version);
+      if (kind === 'ready') discardDownloadedUpdate();   // already downloaded: it is not installed at quit
+      _updState = null; closeUpdateWindow(); break;
+    case 'auto:on':  setAutoUpdate(true); break;
+    case 'auto:off': setAutoUpdate(false); break;
     case 'escape':   if (kind !== 'downloading') { if (kind === 'checking') _checkToken++; closeUpdateWindow(); } break;
     default:         closeUpdateWindow();   // close, later
   }
@@ -662,7 +700,7 @@ autoUpdater.on('download-progress', (p) => {
 
 // Windows only (macOS never calls downloadUpdate)
 autoUpdater.on('update-downloaded', (info) => {
-  setUpdateState(stateReady(info.version));
+  setUpdateState(_bgDownload ? stateReadyFull({ ...info, releaseNotes: info.releaseNotes || (_availableInfo && _availableInfo.releaseNotes) }) : stateReady());
 });
 
 autoUpdater.on('error', (err) => {
@@ -838,6 +876,8 @@ ipcMain.handle('weekly:save', (_, data) => { store.writeJsonAtomic(weeklyF, data
 
 // Manual update check from a Settings-UI button, if desired.
 ipcMain.handle('update:check', () => checkForUpdatesInteractive(true));
+ipcMain.handle('update:auto-get', () => ({ auto: getAutoUpdate(), packaged: app.isPackaged }));
+ipcMain.handle('update:auto-set', (_, on) => { setAutoUpdate(!!on); return { ok: true }; });
 
 ipcMain.handle('image:pick', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {

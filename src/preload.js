@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('api', {
   backupImport: () => ipcRenderer.invoke('backup:import'),
 
   // Auto-update (the update window is drawn by the main process: see panels/)
+  updateAutoGet: () => ipcRenderer.invoke('update:auto-get'),
+  updateAutoSet: (on) => ipcRenderer.invoke('update:auto-set', !!on),
   checkForUpdates: ()                 => ipcRenderer.invoke('update:check'),
 
   // Edit menu: Undo / Redo of day changes (text fields keep their own undo)

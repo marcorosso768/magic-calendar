@@ -1,20 +1,15 @@
-## 🦄 Magic Calendar v1.6.0
+## 🦄 Magic Calendar v1.6.1
 
-Your days on your phone too.
+Automatic updates, and a clearer update window.
 
 ### ✨ What's new
-- **Export for Calendar** (📆 in the sidebar): creates an .ics file for Apple Calendar, Google Calendar or Outlook, so you can see the days on your phone too. Choose the months (this month, three months, the school year, the whole year or the months you pick) and what to include:
-  - days with a type (consecutive days become a single event) and notes
-  - first and last day of school, holiday periods
-  - public holidays, patron saint's day and bridge days (optional)
-- The calendar on the phone does not update by itself: after a change, export again and open the file. Events already imported are updated, not duplicated
-
-### 🛠️ Fixes
-- Patron saints: Bari is now 8 May (San Nicola) and Venezia 21 November (Madonna della Salute, since San Marco falls on Liberation Day). If you had chosen one of them, the date is corrected automatically
+- **Automatic updates** (optional): tick "Automatically download and install updates in the future" in the update window, or in Settings → Updates. A new version is then downloaded at launch and installed when you quit the app; when it is ready, a window lets you install it right away
+- **Clearer update window**: what's new is shown with titles, bold text and bullet points; buttons Skip This Version, Remind Me Later and Install Update
+- **Ready to install**: Install on Quit or Install and Relaunch
 
 ### 🖥️ Platforms
-- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.6.0-mac-arm64.dmg`, Intel → `Magic-Calendar-1.6.0-mac-x64.dmg`
-- Windows 10 or later → `Magic-Calendar-1.6.0-win-x64.exe`
+- macOS 13 Ventura or later: Apple Silicon → `Magic-Calendar-1.6.1-mac-arm64.dmg`, Intel → `Magic-Calendar-1.6.1-mac-x64.dmg`
+- Windows 10 or later → `Magic-Calendar-1.6.1-win-x64.exe`
 
 ### 📦 Notes
-If you have version 1.1.0 or later, this update installs itself.
+If you have version 1.1.0 or later, this update installs itself. The new window appears from the next update onwards.

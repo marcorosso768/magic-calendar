@@ -280,6 +280,7 @@ function openSettings() {
   renderSchoolBlock(s);
   renderDayTypesSection(s);
   renderBackupBlock();
+  renderUpdatesBlock();
   renderTimeFormatSelector(s.timeFormat || '24h');
   renderTimeslots(s.timeslots || []);
   renderCustomIcons(s.customIcons || []);
@@ -425,6 +426,30 @@ function renderSchoolBlock(s) {
     App.refresh();
   });
   ['patron-city', 'patron-name', 'patron-date'].forEach(id => document.getElementById(id).addEventListener('change', readOther));
+}
+
+// Automatic updates: the preference lives in the main process (it is used before any window opens),
+// so it is saved at once, not with "Save settings". Shown only in the installed app.
+function renderUpdatesBlock() {
+  let block = document.getElementById('updates-block');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'updates-block';
+    block.className = 'settings-block';
+    const backup = document.getElementById('backup-block');
+    if (backup) backup.insertAdjacentElement('beforebegin', block);
+    else document.querySelector('#modal-settings .modal-body').appendChild(block);
+  }
+  if (!window.api?.updateAutoGet) { block.remove(); return; }
+  window.api.updateAutoGet().then(({ auto, packaged }) => {
+    if (!packaged) { block.style.display = 'none'; return; }
+    block.style.display = '';
+    block.innerHTML = `
+      <div class="settings-title">${I18n.t('updatesSection')}</div>
+      <label class="set-check"><input type="checkbox" id="updates-auto" ${auto ? 'checked' : ''}> ${escapeHtml(I18n.t('updatesAuto'))}</label>
+      <p class="hint">${escapeHtml(I18n.t('updatesAutoHint'))}</p>`;
+    document.getElementById('updates-auto').addEventListener('change', e => window.api.updateAutoSet(e.target.checked));
+  });
 }
 
 // Backup: all calendars, week plans, settings and images in one file (main.js does the work).
